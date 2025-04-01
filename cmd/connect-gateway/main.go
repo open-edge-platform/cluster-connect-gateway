@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/atomix/dazl"
 	_ "github.com/atomix/dazl/zap"
@@ -59,6 +60,9 @@ func main() {
 	}
 
 	listenAddr := fmt.Sprintf("%s:%d", gatewayAddress, gatewayPort)
+	clientCleanupTicker := time.NewTicker(20 * time.Minute) // change to 2/4/6 hours?
+	defer clientCleanupTicker.Stop()
+
 	server, err := server.NewServer(
 		server.WithListenAddr(listenAddr),
 		server.WithAuth(enableAuth, opaAddress, opaPort),
@@ -66,6 +70,7 @@ func main() {
 		server.WithExternalHost(externalHost),
 		server.WithOIDCIssuerURL(oidcIssuerURL),
 		server.WithOIDCInsecureSkipVerify(oidcInsecureSkipVerify),
+		server.WithCleanupTicker(clientCleanupTicker),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create gateway server: %v", err)

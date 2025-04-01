@@ -41,6 +41,7 @@ type Server struct {
 	oidcInsecureSkipVerify bool
 	opaAddress             string
 	opaPort                int
+	cleanupTicker          *time.Ticker
 }
 
 type ServerOptions func(*Server)
@@ -104,6 +105,12 @@ func WithOIDCIssuerURL(issuerURL string) ServerOptions {
 	}
 }
 
+func WithCleanupTicker(ticker *time.Ticker) ServerOptions {
+	return func(s *Server) {
+		s.cleanupTicker = ticker
+	}
+}
+
 func WithOIDCInsecureSkipVerify(insecureSkipVerify bool) ServerOptions {
 	return func(s *Server) {
 		s.oidcInsecureSkipVerify = insecureSkipVerify
@@ -139,6 +146,15 @@ func NewServer(options ...ServerOptions) (s *Server, err error) {
 }
 
 func (s *Server) Run() error {
+	if s.cleanupTicker != nil {
+		go func() {
+			log.Debug("starting routine to clean-up unused http clients")
+			for range s.cleanupTicker.C {
+				s.cleanupUnusedHttpClients()
+			}
+		}()
+	}
+
 	log.Infof("Listening on %s", s.listenAddr)
 	if err := http.ListenAndServe(s.listenAddr, s.router); err != nil {
 		return err

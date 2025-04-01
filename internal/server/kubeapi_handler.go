@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -88,7 +89,7 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	metrics.RequestLatency.Observe(duration)
 }
 
-func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http.Client, *rest.Config, error) {
+func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client, *rest.Config, error) {
 	// Check if the client is already cached
 	key := fmt.Sprintf("%s/%s", tunnelID, timeout)
 	client, ok := clients.Load(key)
@@ -126,7 +127,6 @@ func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http
 	}
 
 	restCfg.Dial = s.remotedialer.Dialer(tunnelID)
-
 	// Now create a new HTTP client with the rest config
 	httpClient, err := rest.HTTPClientFor(restCfg)
 	if err != nil {
@@ -154,4 +154,19 @@ func makeUpgradeTransport(config *rest.Config, rt http.RoundTripper) (proxy.Upgr
 	}
 
 	return proxy.NewUpgradeRequestRoundTripper(rt, upgrader), nil
+}
+
+func (s *Server) cleanupUnusedHttpClients() {
+	log.Debug("cleaning unused http clients")
+	clients.Range(func(key, value any) bool {
+		clientName := key.(string)
+		// remove the timeout from the key to get the tunnel ID
+		tunnelId := strings.Split(clientName, "/")[0]
+		if !s.remotedialer.HasSession(tunnelId) {
+			log.Debugf("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
+			clients.Delete(clientName)
+			log.Debug("finished removing unused http client")
+		}
+		return true
+	})
 }
