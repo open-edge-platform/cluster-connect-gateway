@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+scan:
+  skip-files:
+    - config/manager/manager.yaml
+    - config/rbac/leader_election_role.yaml
+    - config/rbac/role.yaml
+    - deployment/charts/cluster-connect-gateway/templates/rbac.yaml
+    - deployment/charts/cluster-connect-gateway/templates/deployment-controller.yaml
+    - deployment/charts/cluster-connect-gateway/templates/deployment-gateway.yaml

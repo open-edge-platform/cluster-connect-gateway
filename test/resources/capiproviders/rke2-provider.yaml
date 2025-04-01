@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/core: capi-operator
+    control-plane: controller-manager
+  name: capr-system
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: ControlPlaneProvider
+metadata:
+ name: rke2
+ namespace: capr-system
+spec:
+ version: v0.11.0
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: BootstrapProvider
+metadata:
+ name: rke2
+ namespace: capr-system
+spec:
+ version: v0.11.0

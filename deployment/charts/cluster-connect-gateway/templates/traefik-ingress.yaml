@@ -1,0 +1,42 @@
+# yamllint disable-file
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.gateway.ingress.enabled }}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cluster-connect-gateway-kubeapi
+  namespace: {{ .Values.gateway.ingress.namespace }}
+spec:
+  routes:
+    - match: Host(`{{ required "Traefik route match is required!" .Values.gateway.ingress.hostname }}`) && PathPrefix(`/kubernetes`)
+      kind: Rule
+{{- if .Values.gateway.ingress.authMiddleware }}
+      middlewares:
+        - name: validate-jwt
+{{- end }}
+      services:
+        - name: {{ template "cluster-connect-gateway.fullname" . }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.gateway.service.port }}
+          scheme: http
+---
+# ingress for edge-connect-agent websocket connection
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cluster-connect-gateway-ws
+  namespace: {{ .Values.gateway.ingress.namespace }}
+spec:
+  routes:
+    - match: Host(`{{ required "Traefik route match is required!" .Values.gateway.ingress.hostname }}`) && PathPrefix(`/connect`)
+      kind: Rule
+      services:
+        - name: {{ template "cluster-connect-gateway.fullname" . }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.gateway.service.port }}
+          scheme: http
+{{- end }}

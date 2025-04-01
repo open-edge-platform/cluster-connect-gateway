@@ -1,0 +1,111 @@
+# yamllint disable-file
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{- $registry := .Values.global.registry -}}
+{{- if .Values.controller.image.registry -}}
+{{- $registry = .Values.controller.image.registry -}}
+{{- end -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "cluster-connect-gateway.fullname" . }}-controller
+  {{- with .Values.controller.podAnnotations }}
+  annotations:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  labels:
+    app.kubernetes.io/component: controller
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
+  replicas: {{ .Values.controller.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
+        {{- include "cluster-connect-gateway.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.controller.podSecurityContext | nindent 8 }}
+      {{- with $registry.imagePullSecrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: connect-controller
+        command:
+        - /connect-controller
+        args:
+          - --leader-elect
+          - --health-probe-bind-address=:8081
+        {{- with .Values.controller.extraArgs }}
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.controller.image }}
+        image: "{{- if hasKey $registry "name" }}{{ $registry.name }}/{{- end -}}{{ .repository }}:{{ default $.Chart.AppVersion .tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+        env:
+        - name: PRIVATE_CA_ENABLED
+          value: {{ .Values.controller.privateCA.enabled | quote }}
+        - name: PRIVATE_CA_SECRET_NAME
+          value: {{ .Values.controller.privateCA.secretName | quote }}
+        - name: PRIVATE_CA_SECRET_NAMESPACE
+          value: {{ .Values.controller.privateCA.secretNamespace | quote }}
+        - name: SECRET_NAMESPACE
+          value: {{ .Release.Namespace | quote }}
+        - name: GATEWAY_EXTERNAL_URL
+          value: {{ .Values.gateway.externalUrl | quote }}
+        - name: GATEWAY_INTERNAL_URL
+          value: "http://{{ template "cluster-connect-gateway.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.gateway.service.port}}"
+        - name: AGENT_JWT_TOKEN_PATH
+          value: {{ .Values.security.agent.jwtTokenPath }}
+        - name: "AGENT_AUTH_MODE"
+          value: {{ .Values.security.agent.authMode }}
+        {{- with .Values.agent.image }}
+        - name: AGENT_IMAGE
+          value: "{{- if hasKey .registry "name" }}{{ .registry.name }}/{{- end -}}{{ .repository }}:{{ default $.Chart.AppVersion .tag }}"
+        {{- end }}
+        - name: AGENT_LOG_LEVEL
+          value: {{ .Values.agent.logLevel | quote }}
+        - name: AGENT_TLS_MODE
+          value: {{ .Values.agent.tlsMode | quote }}
+        {{- with .Values.agent.extraEnv }}
+        {{- range $key, $value := . }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.controller.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        ports: []
+        securityContext:
+          {{- toYaml .Values.controller.containerSecurityContext | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{- with .Values.controller.resources }}
+        resources:
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts: []
+      volumes: []
+      serviceAccountName: {{ template "cluster-connect-gateway.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 10

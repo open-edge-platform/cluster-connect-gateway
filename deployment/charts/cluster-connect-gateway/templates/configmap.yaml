@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{ if .Values.openpolicyagent.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "cluster-connect-gateway.fullname" . }}-opa-rego-v2
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+{{ (.Files.Glob "files/openpolicyagent/*.rego").AsConfig | indent 2 }}
+{{- end}}

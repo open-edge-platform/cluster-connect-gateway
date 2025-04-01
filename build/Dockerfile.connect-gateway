@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+# Build the connect-gateway
+FROM golang:1.23.6 AS builder
+ARG TARGETOS
+ARG TARGETARCH
+ENV CGO_ENABLED=0
+ENV GO111MODULE=on
+
+WORKDIR /workspace
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+# Copy the go source
+COPY cmd/ cmd
+COPY api/ api/
+COPY internal/ internal/
+COPY vendor/ vendor/
+COPY Makefile Makefile
+COPY VERSION VERSION
+
+# Build the connect-gateway binary
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} make build-gateway
+
+# Use distroless as minimal base image to package the connect-gateway binary
+FROM gcr.io/distroless/static:nonroot
+USER nonroot
+
+ARG org_oci_version=unknown
+ARG org_oci_source=unknown
+ARG org_oci_revision=unknown
+ARG org_oci_created=unknown
+
+LABEL org.opencontainers.image.version=$org_oci_version \
+    org.opencontainers.image.source=$org_oci_source \
+    org.opencontainers.image.revision=$org_oci_revision \
+    org.opencontainers.image.created=$org_oci_created
+
+WORKDIR /
+COPY --from=builder /workspace/bin/connect-gateway .
+COPY logging.yaml .
+USER 65532:65532

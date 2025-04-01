@@ -1,0 +1,139 @@
+# yamllint disable-file
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{- $registry := .Values.global.registry -}}
+{{- if .Values.gateway.image.registry -}}
+{{- $registry = .Values.gateway.image.registry -}}
+{{- end -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "cluster-connect-gateway.fullname" . }}-gateway
+  annotations:
+    {{- with .Values.gateway.podAnnotations }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}
+  labels:
+    app.kubernetes.io/component: gateway
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: gateway
+      {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
+  replicas: {{ .Values.gateway.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: gateway
+        {{- include "cluster-connect-gateway.labels" . | nindent 8 }}
+        app: {{template "cluster-connect-gateway.fullname" .}}-gateway
+    spec:
+      securityContext:
+        {{- toYaml .Values.gateway.podSecurityContext | nindent 8 }}
+      containers:
+        - name: connect-gateway
+          {{- with .Values.gateway.image }}
+          image: "{{- if hasKey $registry "name" }}{{ $registry.name }}/{{- end -}}{{ .repository }}:{{ default $.Chart.AppVersion .tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          command: [ "/connect-gateway" ]
+          env:
+            {{- if eq .Values.gateway.logLevel "debug" }}
+            - name: CATTLE_TUNNEL_DATA_DEBUG
+              value: "true"
+            {{- end }}
+            {{- if or .Values.gateway.oidc.enabled (eq .Values.security.agent.authMode "jwt") }}
+            - name: OIDC_SERVER_URL
+              value: {{ .Values.gateway.oidc.issuer }}
+            - name: OIDC_TLS_INSECURE_SKIP_VERIFY
+              value: {{ .Values.gateway.oidc.insecureSkipVerify | quote }}
+            {{- end }}
+            {{- with .Values.gateway.extraEnv }}
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            - name: SECRET_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+          args:
+            - "--address={{ .Values.gateway.listenAddress }}"
+            - "--port={{ .Values.gateway.listenPort }}"
+            {{- if .Values.gateway.oidc.enabled }}
+            - "--enable-auth=true"
+            - "--oidc-issuer-url={{ .Values.gateway.oidc.issuer }}"
+            - "--oidc-insecure-skip-verify={{ .Values.gateway.oidc.insecureSkipVerify }}"
+            {{- end }}
+            - "--enable-metrics={{ .Values.gateway.metrics.enable }}"
+            - "--log-level={{ .Values.gateway.logLevel }}"
+            - "--external-host={{ .Values.gateway.ingress.hostname }}"
+            - "--tunnel-auth-mode={{ .Values.security.agent.authMode }}"
+            {{- with .Values.gateway.extraArgs }}
+            {{- range . }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.gateway.listenPort }}
+          securityContext:
+            {{- toYaml .Values.gateway.containerSecurityContext | nindent 12 }}
+          {{- with .Values.controller.resources }}
+          resources:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts: []
+        {{- if .Values.openpolicyagent.enabled }}
+        - name: openpolicyagent
+          securityContext:
+              {{- toYaml .Values.openpolicyagent.securityContext | nindent 12 }}
+          resources:
+              {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.openpolicyagent }}
+          image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .image }}:{{ .tag }}"
+          {{- end}}
+          imagePullPolicy: {{ .Values.openpolicyagent.pullPolicy }}
+          ports:
+            - name: opa
+              containerPort: {{ .Values.openpolicyagent.port }}
+          args:
+            - "run"
+            - "--server"
+            - "--bundle"
+            - "/rego/v2"
+            - "--log-level"
+            - {{ .Values.openpolicyagent.loglevel }}
+            - "--disable-telemetry"
+            - "--addr"
+            - "0.0.0.0:{{ .Values.openpolicyagent.port }}"
+          livenessProbe:
+            httpGet:
+              path: /health?bundle=true  # Include bundle activation in readiness
+              scheme: HTTP
+              port: {{ .Values.openpolicyagent.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health?bundle=true  # Include bundle activation in readiness
+              scheme: HTTP
+              port: {{ .Values.openpolicyagent.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: openpolicyagent-v2
+              mountPath: /rego/v2
+              readOnly: true
+        {{- end }}
+      volumes:
+        {{- if .Values.openpolicyagent.enabled }}
+        - name: openpolicyagent-v2
+          configMap:
+              name: {{ template "cluster-connect-gateway.fullname" . }}-opa-rego-v2
+        {{- end }}
+      serviceAccountName: {{ template "cluster-connect-gateway.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 10

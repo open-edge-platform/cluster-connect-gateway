@@ -1,0 +1,11 @@
+apiVersion: cluster.edge-orchestrator.intel.com/v1alpha1
+kind: ClusterConnect
+metadata:
+  name: sample-with-control-plane-ref
+spec:
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: RKE2ControlPlane
+    name: sample-control-plane
+    namespace: default
+

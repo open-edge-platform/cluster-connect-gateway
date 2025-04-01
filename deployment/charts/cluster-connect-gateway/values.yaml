@@ -1,0 +1,210 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+global:
+  registry: {} # TODO: Add correct registry
+  # name:
+  # imagePullSecrets: []
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+security: # TODO move variables to this section to remove duplicates
+
+  agent:
+    authMode: "token"
+    # path to jwt token that is used for agent auth to gateway.
+    jwtTokenPath: "/etc/intel_edge_node/tokens/connect-agent/access_token"
+
+gateway:
+  image:
+    registry:
+      name: registry-rs.edgeorchestration.intel.com
+    #  imagePullSecrets: []
+    repository: edge-orch/cluster/connect-gateway
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  replicaCount: 1
+
+  resources:
+    gateway:
+      limits:
+        cpu: 1
+        memory: 512Mi
+      requests:
+        cpu: 10m
+        memory: 128Mi
+
+  # This is for setting Kubernetes Annotations to a Pod.
+  podAnnotations: {}
+
+  # This is for setting Kubernetes Labels to a Pod.
+  podLabels: {}
+
+  ## Configure Pods Security Context
+  podSecurityContext:
+    #runAsGroup:
+    runAsNonRoot: true
+
+  ## Configure Container Security Context (only main container)
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - "ALL"
+
+  # Available log levels are warn, info, debug.
+  # Set to debug to print tunnel data to the logs.
+  logLevel: info
+
+  # The address and port the gateway listens on
+  listenAddress: "0.0.0.0"
+  listenPort: 8080
+
+  # Enable prometheus metrics
+  metrics:
+    enable: true
+
+  # Format: protocol://domain[:port]. Usually:
+  # 1) if "exposureType" is "ingress", the "domain" should be the value of "ingress.hostname"
+  # 2) if "exposureType" is "service" and "service.type" is "ClusterIP", the "domain" should be the service name and namespace
+  # 3) if "exposureType" is "service" and "service.type" is "NodePort", the "domain" should be the IP address of K8s node
+  # 4) if "exposureType" is "service" and "service.type" is "LoadBalancer", the "domain" should be the LoadBalancer IP
+  externalUrl: ws://cluster-connect-gateway.default.svc:8080
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # TODO: Support standard ingress
+  ingress:
+    enabled: false
+    authMiddleware: false
+    hostname: connect-gateway.kind.internal
+    namespace: orch-gateway
+
+  oidc:
+    enabled: false
+    issuer: "http://platform-keycloak.orch-platform.svc:8080/realms/master"
+    insecureSkipVerify: true
+
+  # TODO: add ingress configuration
+
+  # Additional command line flags to pass.
+  extraArgs: []
+
+  # Additional environment variables to pass.
+  extraEnv: []
+
+openpolicyagent:
+  enabled: false
+  port: 8181
+  image: openpolicyagent/opa
+  tag: 1.2.0
+  loglevel: debug
+  pullPolicy: IfNotPresent
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - "ALL"
+
+controller:
+  image:
+    registry:
+      name: registry-rs.edgeorchestration.intel.com
+    #  imagePullSecrets: []
+    repository: edge-orch/cluster/connect-controller #TODO: Add correct repository name
+    # This sets the pull policy for images.
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+
+  replicaCount: 1
+
+  resources:
+    limits:
+      cpu: 1
+      memory: 512Mi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+
+  # This is for setting Kubernetes Annotations to a Pod.
+  podAnnotations: {}
+
+  # This is for setting Kubernetes Labels to a Pod.
+  podLabels: {}
+
+  ## Configure Pods Security Context
+  podSecurityContext:
+    #runAsGroup:
+    runAsNonRoot: true
+
+  ## Configure Container Security Context (only main container)
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - "ALL"
+
+  # Set the verbosity. Range of 0 - 6 with 6 being the most verbose.
+  logLevel: 2
+
+  # Additional command line flags to pass.
+  extraArgs: []
+
+  # Additional environment variables to pass.
+  extraEnv: []
+
+  # Enabling private CA will set an orchestration self-signed certificate in the kubeConfig secret
+  # which can be used by the downstream cluster fleet-agent to access the Kubernetes API service in the orchestration cluster
+  privateCA:
+    enabled: true
+    secretName: "tls-orch"
+    secretNamespace : "orch-gateway"
+
+
+agent:
+  image:
+    registry:
+      name: registry-rs.edgeorchestration.intel.com
+    #  imagePullSecrets: []
+    repository: edge-orch/cluster/connect-agent
+    tag: ""
+
+  # Available log levels are warn, info, debug.
+  # Set to debug to print tunnel data to the logs.
+  logLevel: info
+
+  # Determines whether the agent should trust CA bundles from the operating system's trust store
+  # when connecting to connect-gateway. True in `system-store` mode, false in `strict` mode.
+  tlsMode: strict
+
+  # Additional environment variables to pass.
+  extraEnv: []
+  # GATEWAY_CA:
+  # INSECURE_SKIP_VERIFY:
+  # HTTP_PROXY:
+  # HTTPS_PROXY:
+  # NO_PROXY:

@@ -1,0 +1,6 @@
+apiVersion: cluster.edge-orchestrator.intel.com/v1alpha1
+kind: ClusterConnect
+metadata:
+  name: sample
+spec:
+  # TODO(user): Add fields here

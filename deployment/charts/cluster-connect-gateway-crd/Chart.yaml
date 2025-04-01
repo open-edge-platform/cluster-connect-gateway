@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: v2
+name: cluster-connect-gateway-crd
+description: A Helm chart for Cluster Connect Gateway CRDs
+type: application
+version: 1.0.1
+annotations: {}
+appVersion: 1.0.1
