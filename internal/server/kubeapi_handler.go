@@ -165,7 +165,7 @@ func (s *Server) cleanupUnusedHttpClients() {
 		tunnelId := strings.Split(clientName, "/")[0]
 		if !s.remotedialer.HasSession(tunnelId) {
 			log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
-			clients.Delete(clientName)
+			//clients.Delete(clientName)
 			log.Info("finished removing unused http client")
 		}
 		return true
