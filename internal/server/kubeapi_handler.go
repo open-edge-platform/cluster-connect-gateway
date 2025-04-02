@@ -157,8 +157,7 @@ func makeUpgradeTransport(config *rest.Config, rt http.RoundTripper) (proxy.Upgr
 }
 
 func (s *Server) cleanupUnusedHttpClients() {
-	//TODO debug
-	log.Info("cleaning unused http clients")
+	log.Debug("cleaning unused http clients")
 	clients.Range(func(key, value any) bool {
 		clientName := key.(string)
 		// remove the timeout from the key to get the tunnel ID
