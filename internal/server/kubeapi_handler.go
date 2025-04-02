@@ -157,15 +157,16 @@ func makeUpgradeTransport(config *rest.Config, rt http.RoundTripper) (proxy.Upgr
 }
 
 func (s *Server) cleanupUnusedHttpClients() {
-	log.Debug("cleaning unused http clients")
+	//TODO debug
+	log.Info("cleaning unused http clients")
 	clients.Range(func(key, value any) bool {
 		clientName := key.(string)
 		// remove the timeout from the key to get the tunnel ID
 		tunnelId := strings.Split(clientName, "/")[0]
 		if !s.remotedialer.HasSession(tunnelId) {
-			log.Debugf("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
+			log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
 			clients.Delete(clientName)
-			log.Debug("finished removing unused http client")
+			log.Info("finished removing unused http client")
 		}
 		return true
 	})

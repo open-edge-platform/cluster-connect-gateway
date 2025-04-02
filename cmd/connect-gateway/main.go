@@ -60,7 +60,7 @@ func main() {
 	}
 
 	listenAddr := fmt.Sprintf("%s:%d", gatewayAddress, gatewayPort)
-	clientCleanupTicker := time.NewTicker(20 * time.Minute) // change to 2/4/6 hours?
+	clientCleanupTicker := time.NewTicker(2 * time.Minute) // change to 2/4/6 hours?
 	defer clientCleanupTicker.Stop()
 
 	server, err := server.NewServer(
