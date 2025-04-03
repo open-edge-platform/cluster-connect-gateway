@@ -32,7 +32,7 @@ func main() {
 	flag.IntVar(&gatewayPort, "port", 8080, "Port to listen on for edge connection gateway")
 	flag.BoolVar(&enableAuth, "enable-auth", false, "Enable OIDC authentication")
 	flag.BoolVar(&enableMetrics, "enable-metrics", false, "Enable metrics")
-	flag.StringVar(&logLevel, "log-level", "info", "Log levels: info, debug, trace")
+	flag.StringVar(&logLevel, "log-level", "info", "Log levels: info, debug, trace, warn")
 	flag.StringVar(&oidcIssuerURL, "oidc-issuer-url", "", "OIDC Issuer URL")
 	flag.BoolVar(&oidcInsecureSkipVerify, "oidc-insecure-skip-verify", false, "OIDC Insecure Skip Verify")
 	flag.StringVar(&externalHost, "external-host", "", "External host for the gateway")
