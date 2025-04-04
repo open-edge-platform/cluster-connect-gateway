@@ -16,6 +16,8 @@ jobs:
   post-merge:
     uses: open-edge-platform/orch-ci/.github/workflows/post-merge.yml@main
     with:
+      cache_go: true
+      remove_cache_go: true
       run_build: true
       run_security_scans: true
       run_version_check: true
