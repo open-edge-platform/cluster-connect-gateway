@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/atomix/dazl"
 	_ "github.com/atomix/dazl/zap"
@@ -59,6 +60,11 @@ func main() {
 	}
 
 	listenAddr := fmt.Sprintf("%s:%d", gatewayAddress, gatewayPort)
+	// TODO: make the # of hours configurable via helm chart. Will use minutes so we can trigger it quick if needed
+	// hours seems too much
+	clientCleanupTicker := time.NewTicker(480 * time.Minute)
+	defer clientCleanupTicker.Stop()
+
 	server, err := server.NewServer(
 		server.WithListenAddr(listenAddr),
 		server.WithAuth(enableAuth, opaAddress, opaPort),
@@ -66,6 +72,7 @@ func main() {
 		server.WithExternalHost(externalHost),
 		server.WithOIDCIssuerURL(oidcIssuerURL),
 		server.WithOIDCInsecureSkipVerify(oidcInsecureSkipVerify),
+		server.WithCleanupTicker(clientCleanupTicker),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create gateway server: %v", err)
