@@ -45,12 +45,6 @@ const (
 
 // ClusterConnectSpec defines the desired state of ClusterConnect.
 type ClusterConnectSpec struct {
-	// ControlPlaneRef is an optional reference to a CAPI provider-specific resource that holds
-	// the details for provisioning the Control Plane for a Cluster.
-	// Must set to automatically inject connect-agent pod manifest to CAPI ControlPlane Spec.
-	// +optional
-	ControlPlaneRef *corev1.ObjectReference `json:"controlPlaneRef,omitempty"`
-
 	// ClusterRef is an optional reference to a CAPI provider-specific resource that holds
 	// the details for the Cluster to connect.
 	// +optional
@@ -71,8 +65,6 @@ type ClusterConnectSpec struct {
 // ClusterConnectStatus defines the observed state of ClusterConnect.
 type ClusterConnectStatus struct {
 	// Ready indicates connect-agent pod manifest is ready to be consumed.
-	// If ControlPlaneRef is set, this means connect-agent pod manifest is successufully injected to the ControlPlane Spec,
-	// and ready to create control plane machines with it.
 	// +optional
 	Ready bool `json:"ready,omitempty"`
 

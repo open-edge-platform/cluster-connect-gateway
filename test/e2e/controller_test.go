@@ -14,7 +14,7 @@ import (
 
 const resourceName = "capd-rke2-test"
 
-var _ = Describe("Create ClusterConnect with ControlPlaneRef", Ordered, func() {
+var _ = Describe("Create ClusterConnect with ClusterRef", Ordered, func() {
 	BeforeEach(func() {
 		By("ensuring the test Cluster and ClusterConnect do not exist")
 		cmd := exec.Command("kubectl", "get", "cluster", resourceName, "-n", namespace)
