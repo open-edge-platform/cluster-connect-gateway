@@ -23,7 +23,7 @@ var requiredConditionTypes = []string{
 func initConditions(cc *v1alpha1.ClusterConnect) {
 	if len(cc.GetConditions()) == 0 {
 		for _, condition := range requiredConditionTypes {
-			// Skip ClusterSpecUpdatedCondition and TopologyReconciledCondition if ControlPlaneRef is not set.
+			// Skip ClusterSpecUpdatedCondition and TopologyReconciledCondition if ClusterRef is not set.
 			if cc.Spec.ClusterRef == nil {
 				if condition == v1alpha1.ClusterSpecUpdatedCondition ||
 					condition == v1alpha1.TopologyReconciledCondition {

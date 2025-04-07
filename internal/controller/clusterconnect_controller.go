@@ -40,8 +40,7 @@ import (
 const (
 	FinalizerConnectController = "cluster.edge-orchestrator.intel.com/connect-controller"
 
-	controlPlaneRefKey = ".spec.controlPlaneRef"
-	clusterRefKey      = ".spec.clusterRef"
+	clusterRefKey = ".spec.clusterRef"
 
 	agentManifestPath   = "connect-agent.yaml"
 	privateCAEnabledEnv = "PRIVATE_CA_ENABLED"
@@ -121,14 +120,6 @@ func clusterRefIdxFunc(o client.Object) []string {
 	return nil
 }
 
-func controlPlaneRefIdxFunc(o client.Object) []string {
-	ref := o.(*v1alpha1.ClusterConnect).Spec.ControlPlaneRef
-	if ref != nil {
-		return []string{ref.Namespace + ref.Name}
-	}
-	return nil
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	if r.Client == nil {
@@ -172,11 +163,6 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	// Add field indexer for spec.clusterRef field.
 	if err = mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClusterConnect{}, clusterRefKey, clusterRefIdxFunc); err != nil {
 		return errors.Wrap(err, "failed to add field indexer for spec.clusterRef")
-	}
-
-	// Add field indexer for spec.controlPlaneRef field.
-	if err = mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClusterConnect{}, controlPlaneRefKey, controlPlaneRefIdxFunc); err != nil {
-		return errors.Wrap(err, "failed to add field indexer for spec.controlPlaneRef")
 	}
 
 	// Setup external tracker to watch unstructured ControlPlane object.
@@ -291,7 +277,7 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	_ = log.FromContext(ctx)
 
 	// Normal reconcile logic consists of three phases, each dependent on the previous phase.
-	// Setp 4 to 6 is valid only when ControlPlaneRef is set in the ClusterConnect object.
+	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
 	// 1) Ensure the auth token
 	// 2) Generate the connect-agent pod manifest
 	// 3) Set control plane endpoint
@@ -478,7 +464,7 @@ func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1
 		setClusterSpecUpdatedConditionFalse(cc)
 		if err := r.externalTracker.Watch(log, cluster, handler.EnqueueRequestsFromMapFunc(r.clusterToClusterConnectMapper),
 			clusterPredicate); err != nil {
-			return fmt.Errorf("failed to add watch on ControlPlaneRef: %v", err)
+			return fmt.Errorf("failed to add watch on ClusterRef: %v", err)
 		}
 		return nil
 	}
@@ -522,7 +508,7 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 	if apierrors.IsNotFound(err) {
 		if err := r.externalTracker.Watch(log, kc, handler.EnqueueRequestsFromMapFunc(r.secretToClusterConnectMapper),
 			createOnlyPredicate); err != nil {
-			return fmt.Errorf("failed to add watch on ControlPlaneRef: %v", err)
+			return fmt.Errorf("failed to add watch on kubeconfig secret: %v", err)
 		}
 		return nil
 	}
