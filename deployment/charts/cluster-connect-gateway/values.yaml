@@ -137,6 +137,12 @@ controller:
     # Overrides the image tag whose default is the chart appVersion.
     tag: ""
 
+  metrics:
+    enabled: true
+    port: 8088
+    serviceMonitor:
+      enabled: true
+
   replicaCount: 1
 
   resources:

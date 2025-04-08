@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{ if .Values.controller.metrics.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cluster-connect-gateway.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+spec:
+  ports:
+  - name: metrics
+    port: {{ .Values.controller.metrics.port }}
+    protocol: TCP
+    targetPort: {{ .Values.controller.metrics.port }}
+  selector:
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 -}}
+{{- end -}}

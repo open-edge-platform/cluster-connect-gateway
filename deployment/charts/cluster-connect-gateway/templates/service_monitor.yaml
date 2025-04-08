@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.controller.metrics.serviceMonitor.enabled -}}
+# Prometheus Monitor Service (Metrics)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cluster-connect-gateway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchExpressions:
+    - key: prometheus.io/service-monitor
+      operator: NotIn
+      values:
+      - "false"
+    matchLabels:
+      {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
+{{- end -}}
