@@ -5,16 +5,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "cluster-connect-gateway.fullname" . }}-metrics
+  name: {{ include "cluster-connect-gateway.fullname" . }}-controller-metrics
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+    app: controller-metrics-svc
 spec:
   ports:
-  - name: metrics
+  - name: http-metrics-controller
     port: {{ .Values.controller.metrics.port }}
     protocol: TCP
     targetPort: {{ .Values.controller.metrics.port }}
   selector:
+    app.kubernetes.io/component: controller
     {{- include "cluster-connect-gateway.labels" . | nindent 4 -}}
 {{- end -}}

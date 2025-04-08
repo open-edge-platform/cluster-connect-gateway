@@ -6,14 +6,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "cluster-connect-gateway.fullname" . }}
+  name: {{ include "cluster-connect-gateway.fullname" . }}-controller
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
 spec:
   endpoints:
     - path: /metrics
-      port: metrics
+      port: http-metrics-controller
       scheme: http
   namespaceSelector:
     matchNames:
@@ -26,4 +26,33 @@ spec:
       - "false"
     matchLabels:
       {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
+      app: controller-metrics-svc
+---
+{{- end -}}
+{{- if .Values.gateway.metrics.serviceMonitor.enabled -}}
+# Prometheus Monitor Service (Metrics)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cluster-connect-gateway.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+spec:
+  endpoints:
+    - path: /metrics
+      port: http-gateway
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchExpressions:
+    - key: prometheus.io/service-monitor
+      operator: NotIn
+      values:
+      - "false"
+    matchLabels:
+      app: gateway-svc
+---
 {{- end -}}

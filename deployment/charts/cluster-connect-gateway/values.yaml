@@ -78,6 +78,8 @@ gateway:
   # Enable prometheus metrics
   metrics:
     enable: true
+    serviceMonitor:
+      enabled: true
 
   # Format: protocol://domain[:port]. Usually:
   # 1) if "exposureType" is "ingress", the "domain" should be the value of "ingress.hostname"
