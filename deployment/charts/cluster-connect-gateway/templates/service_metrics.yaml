@@ -9,7 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
-    app: controller-metrics-svc
+    {{- include "cluster-connect-gateway.controllerMetricsServiceLabels" . | nindent 4 }}
 spec:
   ports:
   - name: http-metrics-controller

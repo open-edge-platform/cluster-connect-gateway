@@ -91,6 +91,8 @@ gateway:
   service:
     type: ClusterIP
     port: 8080
+    labels:
+      app: gateway-svc
 
   # TODO: Support standard ingress
   ingress:
@@ -142,6 +144,9 @@ controller:
   metrics:
     enabled: true
     port: 8088
+    # Labels applied to the service exposing metrics.
+    serviceLabels:
+      app: controller-metrics-svc
     serviceMonitor:
       enabled: true
 

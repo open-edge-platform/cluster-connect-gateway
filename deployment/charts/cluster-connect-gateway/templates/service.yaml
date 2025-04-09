@@ -8,7 +8,7 @@ kind: Service
 metadata:
   name: {{ template "cluster-connect-gateway.fullname" . }}
   labels:
-    app: gateway-svc
+    {{- include "cluster-connect-gateway.gatewayMetricsServiceLabels" . | nindent 4 }}
 spec:
   selector:
     app: {{ template "cluster-connect-gateway.fullname" . }}-gateway

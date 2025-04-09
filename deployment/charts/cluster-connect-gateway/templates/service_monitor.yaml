@@ -25,8 +25,7 @@ spec:
       values:
       - "false"
     matchLabels:
-      {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
-      app: controller-metrics-svc
+      {{- include "cluster-connect-gateway.controllerMetricsServiceLabels" . | nindent 6 }}
 ---
 {{- end -}}
 {{- if .Values.gateway.metrics.serviceMonitor.enabled -}}
@@ -53,6 +52,6 @@ spec:
       values:
       - "false"
     matchLabels:
-      app: gateway-svc
+      {{- include "cluster-connect-gateway.gatewayMetricsServiceLabels" . | nindent 6 }}
 ---
 {{- end -}}
