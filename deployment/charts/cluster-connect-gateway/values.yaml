@@ -79,7 +79,7 @@ gateway:
   metrics:
     enable: true
     serviceMonitor:
-      enabled: true
+      enabled: false
 
   # Format: protocol://domain[:port]. Usually:
   # 1) if "exposureType" is "ingress", the "domain" should be the value of "ingress.hostname"
@@ -148,7 +148,7 @@ controller:
     serviceLabels:
       app: controller-metrics-svc
     serviceMonitor:
-      enabled: true
+      enabled: false
 
   replicaCount: 1
 
