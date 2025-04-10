@@ -3,81 +3,81 @@
 
 ---
 
-  name: Pre-Merge CI Pipeline
+name: Pre-Merge CI Pipeline
   
-  on:
-    pull_request:
-      branches:
-        - main
-        - release-*
-    workflow_dispatch: 
-  
-  jobs:
-    lint:
-      runs-on: ubuntu-latest
-      steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-  
-      - name: "Setup"
-        uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
-        with:
-          gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
-          bootstrap_tools: "go,gotools,nodejs"
-  
-      - name: Lint code
-        run: make lint
-  
-    build:
-      runs-on: ubuntu-latest
-      steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-  
-      - name: "Setup"
-        uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
-        with:
-          gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
-          bootstrap_tools: "go,gotools"
-  
-      - name: Build code
-        run: make build
-  
-    test:
-      runs-on: ubuntu-latest
-      steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-  
-      - name: "Setup"
-        uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
-        with:
-          gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
-          bootstrap_tools: "go,gotools" 
-  
-      - name: Test code
-        run: make test
-    
-    pre-merge:
-      needs: [lint, build, test]
-      uses: open-edge-platform/orch-ci/.github/workflows/pre-merge.yml@main
+on:
+  pull_request:
+    branches:
+      - main
+      - release-*
+  workflow_dispatch: 
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
       with:
-        bootstrap_tools: "base,go"
-        cache_go: true
-        remove_cache_go: true
-        run_security_scans: true
-        run_version_check: true
-        run_dep_version_check: true
-        run_build: false
-        run_lint: false
-        run_test: false
-        run_validate_clean_folder: false
-        run_docker_build: true
-        run_scan_containers: false
-      secrets: inherit
+        ref: ${{ github.head_ref }}
+
+    - name: "Setup"
+      uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
+      with:
+        gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
+        bootstrap_tools: "go,gotools,nodejs"
+
+    - name: Lint code
+      run: make lint
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: "Setup"
+      uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
+      with:
+        gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
+        bootstrap_tools: "go,gotools"
+
+    - name: Build code
+      run: make build
+  
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: "Setup"
+      uses: open-edge-platform/orch-ci/.github/actions/bootstrap@main
+      with:
+        gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
+        bootstrap_tools: "go,gotools" 
+
+    - name: Test code
+      run: make test
+    
+  pre-merge:
+    needs: [lint, build, test]
+    uses: open-edge-platform/orch-ci/.github/workflows/pre-merge.yml@main
+    with:
+      bootstrap_tools: "base,go"
+      cache_go: true
+      remove_cache_go: true
+      run_security_scans: true
+      run_version_check: true
+      run_dep_version_check: true
+      run_build: false
+      run_lint: false
+      run_test: false
+      run_validate_clean_folder: false
+      run_docker_build: true
+      run_scan_containers: false
+    secrets: inherit
