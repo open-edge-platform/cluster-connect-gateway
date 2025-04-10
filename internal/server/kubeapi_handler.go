@@ -91,7 +91,15 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 
 func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client, *rest.Config, error) {
 	// Check if the client is already cached
-	key := fmt.Sprintf("%s/%s", tunnelID, timeout)
+	// use the intelclusternamespace-intelclsutename as the key instead of the tunnel id
+	// tunnelid is fmt.Sprintf("%s-%s", cluster.Namespace, cluster.Name)
+	clientKey, err := s.kubeclient.GetIntelClusterName(tunnelID)
+	if err != nil {
+		log.Errorf("Unable to retrieve intelcluster name and namespace for %s: %v", tunnelID, err)
+		return nil, nil, err
+	}
+	// key := fmt.Sprintf("%s/%s", tunnelID, timeout)
+	key := fmt.Sprintf("%s/%s", clientKey, timeout)
 	client, ok := clients.Load(key)
 	if ok {
 		return client.(*Client).httpClient, client.(*Client).restCfg, nil
@@ -162,6 +170,7 @@ func (s *Server) cleanupUnusedHttpClients() {
 		clientName := key.(string)
 		// remove the timeout from the key to get the tunnel ID
 		tunnelId := strings.Split(clientName, "/")[0]
+		// tODO sicne the cache key is changing, this needs a small update as well
 		if !s.remotedialer.HasSession(tunnelId) {
 			log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
 			clients.Delete(clientName)

@@ -37,6 +37,7 @@ type Kubeclient interface {
 	GetCerts(tunnelId string) (*x509.CertPool, tls.Certificate, error)
 	InvalidateCerts(tunnelId string) error
 	GetKubeconfig(tunnelId string) (*api.Config, error)
+	GetIntelClusterName(tunnelId string) (string, error)
 	InvalidateKubeconfig(tunnelId string) error
 }
 
@@ -217,4 +218,15 @@ func (m *kubeclient) getServerCertFromSecret(cc *v1alpha1.ClusterConnect) (map[s
 		return nil, err
 	}
 	return secret.Data, nil
+}
+
+func (m *kubeclient) GetIntelClusterName(tunnelId string) (string, error) {
+	// Get the cluster connect object from the API server
+	cc, err := m.getClusterConnect(tunnelId)
+	if err != nil {
+		log.Errorf("Failed to get cluster connect for tunnel %s: %v", tunnelId, err)
+		return "", err
+	}
+
+	return fmt.Sprintf("%s-%s", cc.Spec.ClusterRef.Namespace, cc.OwnerReferences[0].Name), nil
 }
