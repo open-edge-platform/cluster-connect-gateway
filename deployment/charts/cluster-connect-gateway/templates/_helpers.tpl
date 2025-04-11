@@ -49,6 +49,25 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
+Controller's Metrics service labels
+*/}}
+{{- define "cluster-connect-gateway.controllerMetricsServiceLabels" -}}
+{{- with .Values.controller.metrics.serviceLabels }}
+{{- toYaml . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Gateway's service labels
+*/}}
+{{- define "cluster-connect-gateway.gatewayMetricsServiceLabels" -}}
+{{- with .Values.gateway.service.labels }}
+{{- toYaml . }}
+{{- end }}
+{{- end }}
+
+
+{{/*
 Selector labels
 */}}
 {{- define "cluster-connect-gateway.selectorLabels" -}}

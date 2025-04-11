@@ -78,6 +78,8 @@ gateway:
   # Enable prometheus metrics
   metrics:
     enable: true
+    serviceMonitor:
+      enabled: false
 
   # Format: protocol://domain[:port]. Usually:
   # 1) if "exposureType" is "ingress", the "domain" should be the value of "ingress.hostname"
@@ -89,6 +91,8 @@ gateway:
   service:
     type: ClusterIP
     port: 8080
+    labels:
+      app: gateway-svc
 
   # TODO: Support standard ingress
   ingress:
@@ -136,6 +140,15 @@ controller:
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: ""
+
+  metrics:
+    enabled: true
+    port: 8080
+    # Labels applied to the service exposing metrics.
+    serviceLabels:
+      app: controller-metrics-svc
+    serviceMonitor:
+      enabled: false
 
   replicaCount: 1
 
