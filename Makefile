@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
+SHELL := bash -eu -o pipefail
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -75,11 +77,6 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
-
 .PHONY: all
 all: help
 
@@ -144,7 +141,7 @@ coverage: ## Generate test coverage report.
 # To skip Kind cleanup after the test, set the environment variable:
 # - SKIP_KIND_CLEANUP=true
 
-# TODO: Fix it 
+# TODO: Fix it
 .PHONY: test-e2e
 test-e2e: manifests generate fmt vet destroy ## Run the e2e tests. Expected an isolated environment using Kind.
 	cd test && SKIP_KIND_CLEANUP=true ./local-e2e.sh
@@ -227,6 +224,25 @@ docker-push-agent: ## Push docker image with the agent.
 	$(CONTAINER_TOOL) push ${DOCKER_IMAGE_AGENT}
 	$(CONTAINER_TOOL) push ${DOCKER_IMAGE_AGENT_LATEST}
 
+.PHONY: docker-list
+docker-list: ## Print name of docker container images
+	@echo "images:"
+	@echo "  connect-controller:"
+	@echo "    name: '$(DOCKER_IMAGE_CONTROLLER)'"
+	@echo "    version: '$(VERSION)'"
+	@echo "    gitTagPrefix: 'v'"
+	@echo "    buildTarget: 'docker-build-controller'"
+	@echo "  connect-gateway:"
+	@echo "    name: '$(DOCKER_IMAGE_GATEWAY)'"
+	@echo "    version: '$(VERSION)'"
+	@echo "    gitTagPrefix: 'v'"
+	@echo "    buildTarget: 'docker-build-gateway'"
+	@echo "  connect-agent:"
+	@echo "    name: '$(DOCKER_IMAGE_AGENT)'"
+	@echo "    version: '$(VERSION)'"
+	@echo "    gitTagPrefix: 'v'"
+	@echo "    buildTarget: 'docker-build-agent'"
+
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
@@ -282,6 +298,17 @@ helm-build: ## Package helm charts.
 .PHONY: helm-push
 helm-push: ## Push helm charts.
 	for c in $(HELM_PKGS); do helm push $$c oci://$(REGISTRY)/$(REGISTRY_NO_AUTH)/$(REPOSITORY)/charts; done
+
+.PHONY: helm-list
+helm-list:
+	@echo "charts:"
+	@for d in $(HELM_DIRS); do \
+    cname=$$(grep "^name:" "$$d/Chart.yaml" | cut -d " " -f 2) ;\
+    echo "  $$cname:" ;\
+    echo -n "    "; grep "^version" "$$d/Chart.yaml"  ;\
+    echo "    gitTagPrefix: 'v'" ;\
+    echo "    outDir: '.'" ;\
+  done
 
 ##@ Deployment
 
@@ -437,12 +464,12 @@ docker-load: ## Load docker images into the KinD cluster.
 helm-install: helm-build ## Install helm charts to the K8s cluster in current context.
 	helm upgrade --install cluster-connect-gateway-crd deployment/charts/cluster-connect-gateway-crd -n ${NAMESPACE} --create-namespace
 	helm upgrade --install cluster-connect-gateway deployment/charts/cluster-connect-gateway -n ${NAMESPACE} --create-namespace \
-		${HELM_VARS} 
+		${HELM_VARS}
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall helm charts from the K8s cluster in current context.
 	helm uninstall cluster-connect-gateway cluster-connect-gateway-crd -n ${NAMESPACE}
-	
+
 .PHONY: redeploy
 redeploy: docker-build docker-load ## Redeploy the pod with the latest codes.
 	kubectl delete po -l app.kubernetes.io/instance=cluster-connect-gateway -n ${NAMESPACE}
