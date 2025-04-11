@@ -45,6 +45,10 @@ spec:
         args:
           - --leader-elect
           - --health-probe-bind-address=:8081
+        {{- if .Values.controller.metrics.enabled }}
+          - --metrics-bind-address=:{{ .Values.controller.metrics.port }}
+          - --metrics-secure=false
+        {{- end }}
         {{- with .Values.controller.extraArgs }}
         {{- toYaml . | nindent 10 }}
         {{- end }}
@@ -86,7 +90,12 @@ spec:
         {{- with .Values.controller.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        ports: []
+        ports:
+        {{- if .Values.controller.metrics.enabled }}
+          - name: metrics
+            containerPort: {{ .Values.controller.metrics.port }}
+            protocol: TCP
+        {{- end }}
         securityContext:
           {{- toYaml .Values.controller.containerSecurityContext | nindent 10 }}
         livenessProbe:

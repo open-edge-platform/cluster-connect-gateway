@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{ if .Values.controller.metrics.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cluster-connect-gateway.fullname" . }}-controller-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 }}
+    {{- include "cluster-connect-gateway.controllerMetricsServiceLabels" . | nindent 4 }}
+spec:
+  ports:
+  - name: http-metrics-controller
+    port: {{ .Values.controller.metrics.port }}
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    app.kubernetes.io/component: controller
+    {{- include "cluster-connect-gateway.labels" . | nindent 4 -}}
+{{- end -}}

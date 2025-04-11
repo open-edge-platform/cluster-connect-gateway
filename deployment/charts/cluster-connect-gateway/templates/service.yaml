@@ -7,6 +7,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "cluster-connect-gateway.fullname" . }}
+  labels:
+    {{- include "cluster-connect-gateway.gatewayMetricsServiceLabels" . | nindent 4 }}
 spec:
   selector:
     app: {{ template "cluster-connect-gateway.fullname" . }}-gateway
@@ -15,3 +17,4 @@ spec:
     - protocol: TCP
       port: {{ .Values.gateway.service.port }}
       targetPort: {{ .Values.gateway.listenPort }}
+      name: http-gateway
