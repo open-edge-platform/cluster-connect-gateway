@@ -141,10 +141,10 @@ func (k *kubeclient) InvalidateCerts(tunnelId string) error {
 // GetKubeconfig retrieves the kubeconfig for a given tunnel ID
 func (k *kubeclient) GetKubeconfig(tunnelId string) (*api.Config, error) {
 	// Get the client certificate from the cert store
-	cached, ok := k.kcStore.Load(tunnelId)
-	if ok {
-		return cached.(*api.Config), nil
-	}
+	// cached, ok := k.kcStore.Load(tunnelId)
+	// if ok {
+	// 	return cached.(*api.Config), nil
+	// }
 
 	// Get the cluster connect object from the API server
 	cc, err := k.getClusterConnect(tunnelId)
@@ -170,7 +170,7 @@ func (k *kubeclient) GetKubeconfig(tunnelId string) (*api.Config, error) {
 		return nil, err
 	}
 
-	k.kcStore.Store(tunnelId, config)
+	// k.kcStore.Store(tunnelId, config)
 	return config, nil
 }
 
