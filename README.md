@@ -96,5 +96,5 @@ For support, start with Troubleshooting or contact us.
 
 ## License
 
-Cluster Connect Gateway is licensed under Apache 2.0.
+Cluster Connect Gateway is licensed under [Apache 2.0 License](LICENSES/Apache-2.0.txt)
 
