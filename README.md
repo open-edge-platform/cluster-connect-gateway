@@ -79,7 +79,7 @@ make redeploy
 
 ## Contribute
 
-We welcome contributions from the community! To contribute, please open a pull request to have your changes reviewed and merged into the main. We encourage you to add appropriate unit tests and e2e tests if your contribution introduces a new feature.
+We welcome contributions from the community! To contribute, please open a pull request to have your changes reviewed and merged into the main. To learn how to contribute to the project, see the [contributor's guide](https://docs.openedgeplatform.intel.com/edge-manage-docs/main/developer_guide/contributor_guide/index.html). We encourage you to add appropriate unit tests and e2e tests if your contribution introduces a new feature.
 
 Additionally, ensure the following commands are successful:
 
