@@ -18,5 +18,5 @@ spec:
     targetPort: metrics
   selector:
     app.kubernetes.io/component: controller
-    {{- include "cluster-connect-gateway.labels" . | nindent 4 -}}
+    {{- include "cluster-connect-gateway.selectorLabels" . | nindent 4 -}}
 {{- end -}}
