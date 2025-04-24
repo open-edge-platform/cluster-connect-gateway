@@ -6,6 +6,5 @@ agent:
   image:
     registry:
       name: registry-rs.edgeorchestration.intel.com
-    #  imagePullSecrets: []
     repository: edge-orch/cluster/connect-agent
-    tag: "1.0.6"
+    tag: 1.0.6

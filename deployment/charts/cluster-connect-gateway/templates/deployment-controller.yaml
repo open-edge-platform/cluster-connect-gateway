@@ -73,9 +73,8 @@ spec:
           value: {{ .Values.security.agent.jwtTokenPath }}
         - name: "AGENT_AUTH_MODE"
           value: {{ .Values.security.agent.authMode }}
-        {{- with .Values.agent.image }}
+        {{- with .Values.agent.enabled }}
         - name: AGENT_IMAGE
-          # value: "{{- if hasKey .registry "name" }}{{ .registry.name }}/{{- end -}}{{ .repository }}:{{ default $.Chart.AppVersion .tag }}"
           valueFrom:
             configMapKeyRef:
               name: connect-agent-config

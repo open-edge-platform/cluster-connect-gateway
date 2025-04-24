@@ -199,12 +199,13 @@ controller:
 
 
 agent:
-  image:
-    registry:
-      name: registry-rs.edgeorchestration.intel.com
-    #  imagePullSecrets: []
-    repository: edge-orch/cluster/connect-agent
-    tag: ""
+  enabled: true
+  # image:
+  #   registry:
+  #     name: registry-rs.edgeorchestration.intel.com
+  #   #  imagePullSecrets: []
+  #   repository: edge-orch/cluster/connect-agent
+  #   tag: ""
 
   # Available log levels are warn, info, debug.
   # Set to debug to print tunnel data to the logs.

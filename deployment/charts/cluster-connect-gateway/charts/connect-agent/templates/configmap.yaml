@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{ if .Values.connectagent.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,4 +11,4 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 data:
-  AGENT_IMAGE: {{ .Values.agent.image | quote }}
+  AGENT_IMAGE: {{- if hasKey .Values.agent.image.registry "name" }}{{ .Values.agent.image.registry.name }}/{{- end -}}{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag | quote }}
