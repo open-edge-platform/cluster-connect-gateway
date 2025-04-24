@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{ if .Values.connectagent.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connect-agent-config
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  AGENT_IMAGE: {{ .Values.agent.image | quote }}

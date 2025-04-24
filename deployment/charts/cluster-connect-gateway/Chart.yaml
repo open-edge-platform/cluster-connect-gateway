@@ -6,8 +6,8 @@ apiVersion: v2
 name: cluster-connect-gateway
 description: A Helm chart for Cluster Connect Gateway
 type: application
-version: 1.1.0-dev
+version: 1.1.1
 annotations:
   revision: 763d1a481c46d92664cb35a6c32f0146dfd04833
   created: "2025-04-18T10:08:15Z"
-appVersion: 1.1.0-dev-763d1a48
+appVersion: 1.1.1

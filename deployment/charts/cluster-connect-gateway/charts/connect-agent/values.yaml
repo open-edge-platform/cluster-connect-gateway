@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+agent:
+  image:
+    registry:
+      name: registry-rs.edgeorchestration.intel.com
+    #  imagePullSecrets: []
+    repository: edge-orch/cluster/connect-agent
+    tag: "1.0.6"
