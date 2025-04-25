@@ -15,7 +15,9 @@ data:
   AGENT_LOG_LEVEL: "{{ .Values.agent.logLevel }}"
   AGENT_TLS_MODE: "{{ .Values.agent.tlsMode }}"
   {{- with .Values.agent.extraEnv }}
+  {{- range . }}
   {{- range $key, $value := . }}
   {{ $key }} : "{{ $value }}"
+  {{- end }}
   {{- end }}
   {{- end }}

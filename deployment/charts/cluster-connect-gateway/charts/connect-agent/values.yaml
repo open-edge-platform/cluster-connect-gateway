@@ -17,9 +17,9 @@ agent:
   tlsMode: strict
 
   # Additional environment variables to pass.
-  extraEnv:
-  # GATEWAY_CA:
-  - INSECURE_SKIP_VERIFY: test
-  # HTTP_PROXY:
-  # HTTPS_PROXY:
-  # NO_PROXY:
+  extraEnv: []
+  # - GATEWAY_CA:
+  # - INSECURE_SKIP_VERIFY:
+  # - HTTP_PROXY:
+  # - HTTPS_PROXY:
+  # - NO_PROXY:
