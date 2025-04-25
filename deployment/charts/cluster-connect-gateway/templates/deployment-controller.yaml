@@ -79,16 +79,16 @@ spec:
             configMapKeyRef:
               name: connect-agent-config
               key: AGENT_IMAGE
-        {{- end }}
         - name: AGENT_LOG_LEVEL
-          value: {{ .Values.agent.logLevel | quote }}
+          valueFrom:
+            configMapKeyRef:
+              name: connect-agent-config
+              key: AGENT_LOG_LEVEL
         - name: AGENT_TLS_MODE
-          value: {{ .Values.agent.tlsMode | quote }}
-        {{- with .Values.agent.extraEnv }}
-        {{- range $key, $value := . }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
+          valueFrom:
+            configMapKeyRef:
+              name: connect-agent-config
+              key: AGENT_TLS_MODE
         {{- end }}
         {{- with .Values.controller.extraEnv }}
         {{- toYaml . | nindent 8 }}

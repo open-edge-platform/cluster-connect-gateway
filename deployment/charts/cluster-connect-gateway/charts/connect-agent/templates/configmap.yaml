@@ -12,3 +12,10 @@ metadata:
     heritage: "{{ .Release.Service }}"
 data:
   AGENT_IMAGE: "{{- if hasKey .Values.agent.image.registry "name" }}{{ .Values.agent.image.registry.name }}/{{- end -}}{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
+  AGENT_LOG_LEVEL: "{{ .Values.agent.logLevel }}"
+  AGENT_TLS_MODE: "{{ .Values.agent.tlsMode }}"
+  {{- with .Values.agent.extraEnv }}
+  {{- range $key, $value := . }}
+  {{ $key }} : "{{ $value }}"
+  {{- end }}
+  {{- end }}

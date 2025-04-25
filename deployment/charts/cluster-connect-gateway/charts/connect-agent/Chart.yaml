@@ -8,3 +8,4 @@ description: A Helm chart for CCG Connect Agent
 type: application
 version: 0.1.0
 appVersion: 0.1.0
+
