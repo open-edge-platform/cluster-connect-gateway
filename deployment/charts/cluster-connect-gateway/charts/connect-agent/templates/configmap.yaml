@@ -11,4 +11,4 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 data:
-  AGENT_IMAGE: {{- if hasKey .Values.agent.image.registry "name" }}{{ .Values.agent.image.registry.name }}/{{- end -}}{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag | quote }}
+  AGENT_IMAGE: "{{- if hasKey .Values.agent.image.registry "name" }}{{ .Values.agent.image.registry.name }}/{{- end -}}{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
