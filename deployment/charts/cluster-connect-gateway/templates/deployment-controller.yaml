@@ -73,7 +73,6 @@ spec:
           value: {{ .Values.security.agent.jwtTokenPath }}
         - name: "AGENT_AUTH_MODE"
           value: {{ .Values.security.agent.authMode }}
-        {{- with .Values.agent.enabled }}
         - name: AGENT_IMAGE
           valueFrom:
             configMapKeyRef:
@@ -89,7 +88,6 @@ spec:
             configMapKeyRef:
               name: connect-agent-config
               key: AGENT_TLS_MODE
-        {{- end }}
         {{- with .Values.controller.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

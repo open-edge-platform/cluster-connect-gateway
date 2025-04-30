@@ -196,7 +196,3 @@ controller:
     enabled: true
     secretName: "tls-orch"
     secretNamespace : "orch-gateway"
-
-
-agent:
-  enabled: true
