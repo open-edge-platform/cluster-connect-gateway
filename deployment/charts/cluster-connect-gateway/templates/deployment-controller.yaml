@@ -73,20 +73,21 @@ spec:
           value: {{ .Values.security.agent.jwtTokenPath }}
         - name: "AGENT_AUTH_MODE"
           value: {{ .Values.security.agent.authMode }}
-        {{- with .Values.agent.image }}
         - name: AGENT_IMAGE
-          value: "{{- if hasKey .registry "name" }}{{ .registry.name }}/{{- end -}}{{ .repository }}:{{ default $.Chart.AppVersion .tag }}"
-        {{- end }}
+          valueFrom:
+            configMapKeyRef:
+              name: connect-agent-config
+              key: AGENT_IMAGE
         - name: AGENT_LOG_LEVEL
-          value: {{ .Values.agent.logLevel | quote }}
+          valueFrom:
+            configMapKeyRef:
+              name: connect-agent-config
+              key: AGENT_LOG_LEVEL
         - name: AGENT_TLS_MODE
-          value: {{ .Values.agent.tlsMode | quote }}
-        {{- with .Values.agent.extraEnv }}
-        {{- range $key, $value := . }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-        {{- end }}
+          valueFrom:
+            configMapKeyRef:
+              name: connect-agent-config
+              key: AGENT_TLS_MODE
         {{- with .Values.controller.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
