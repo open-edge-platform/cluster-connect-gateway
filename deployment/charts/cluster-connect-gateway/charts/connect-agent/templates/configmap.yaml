@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connect-agent-config
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  AGENT_IMAGE: "{{- if hasKey .Values.agent.image.registry "name" }}{{ .Values.agent.image.registry.name }}/{{- end -}}{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
+  AGENT_LOG_LEVEL: "{{ .Values.agent.logLevel }}"
+  AGENT_TLS_MODE: "{{ .Values.agent.tlsMode }}"
+  {{- with .Values.agent.extraEnv }}
+  {{- range . }}
+  {{- range $key, $value := . }}
+  {{ $key }} : "{{ $value }}"
+  {{- end }}
+  {{- end }}
+  {{- end }}
+

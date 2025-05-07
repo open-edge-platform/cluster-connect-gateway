@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+agent:
+  image:
+    registry:
+      name: registry-rs.edgeorchestration.intel.com
+    repository: edge-orch/cluster/connect-agent
+    tag: 1.0.6
+  # Available log levels are warn, info, debug.
+  # Set to debug to print tunnel data to the logs.
+  logLevel: info
+
+  # Determines whether the agent should trust CA bundles from the operating system's trust store
+  # when connecting to connect-gateway. True in `system-store` mode, false in `strict` mode.
+  tlsMode: strict
+
+  # Additional environment variables to pass.
+  extraEnv: []
+  # - GATEWAY_CA:
+  # - INSECURE_SKIP_VERIFY:
+  # - HTTP_PROXY:
+  # - HTTPS_PROXY:
+  # - NO_PROXY:
