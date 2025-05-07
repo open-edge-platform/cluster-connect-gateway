@@ -19,7 +19,7 @@
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 1,
-    "id": 23,
+    "id": 24,
     "links": [],
     "panels": [
       {
@@ -1612,8 +1612,8 @@
     },
     "timepicker": {},
     "timezone": "browser",
-    "title": "Cluster Orch",
+    "title": "Cluster Orch - Cluster Connect Gateway",
     "uid": "aeivjttd2ark0a",
-    "version": 12,
+    "version": 13,
     "weekStart": ""
   }
