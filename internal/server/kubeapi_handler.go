@@ -6,6 +6,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"sync"
@@ -55,27 +56,29 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 	log.Debugf("[%s] REQ OK t=%s %+v", tunnelID, timeout, req)
 
-	client, cfg, err := s.GetClientFromKubeconfig(tunnelID, timeout)
+	client, _, err := s.GetClientFromKubeconfig(tunnelID, timeout)
 	if err != nil {
 		log.Errorf("Error getting client for tunnel %s: %s", tunnelID, err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// Create proxy and set the transport to remotedialer client
-	proxy := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
-
-	upgradeTransport, err := makeUpgradeTransport(cfg, client.Transport)
-	if err != nil {
-		return
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = client.Transport
+	// Modify the Director function to change the request
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		originalDirector(req)
+		req.URL.Scheme = target.Scheme
+		req.Host = target.Host
+		req.URL.Path = target.Path
+		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
 	}
-	proxy.UpgradeTransport = upgradeTransport
-
-	req.URL.Scheme = target.Scheme
-	req.Host = target.Host
-	req.URL.Path = target.Path
-	log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
-
+	proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+		log.Errorf("Proxy error: %v", err)
+		rw.WriteHeader(http.StatusBadGateway)
+		rw.Write([]byte("Bad Gateway"))
+	}
 	proxy.ServeHTTP(rw, req)
 	log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
 
