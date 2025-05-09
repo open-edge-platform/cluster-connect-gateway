@@ -80,6 +80,7 @@ gateway:
     enable: true
     serviceMonitor:
       enabled: false
+    dashboardAdminFolder: orchestrator
 
   # Format: protocol://domain[:port]. Usually:
   # 1) if "exposureType" is "ingress", the "domain" should be the value of "ingress.hostname"
