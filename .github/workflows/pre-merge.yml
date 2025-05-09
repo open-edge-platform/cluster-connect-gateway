@@ -12,8 +12,12 @@ on:
       - release-*
   workflow_dispatch: 
 
+permissions: {}
+
 jobs:
   lint:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - name: Checkout PR
@@ -45,6 +49,8 @@ jobs:
       run: make lint
 
   build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - name: Checkout PR
@@ -75,6 +81,8 @@ jobs:
       run: make build
   
   test:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - name: Checkout PR
@@ -105,6 +113,8 @@ jobs:
       run: make test
     
   pre-merge:
+    permissions:
+      contents: read
     needs: [lint, build, test]
     uses: open-edge-platform/orch-ci/.github/workflows/pre-merge.yml@main
     with:
@@ -120,4 +130,3 @@ jobs:
       run_validate_clean_folder: false
       run_docker_build: true
       run_artifact: false
-    secrets: inherit
