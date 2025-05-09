@@ -8,18 +8,14 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/atomix/dazl"
 	"github.com/gorilla/mux"
-	"k8s.io/apimachinery/pkg/util/proxy"
+	"github.com/open-edge-platform/cluster-connect-gateway/internal/metrics"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/transport"
-
-	"github.com/open-edge-platform/cluster-connect-gateway/internal/metrics"
 )
 
 const (
@@ -29,13 +25,7 @@ const (
 var (
 	log     = dazl.GetPackageLogger()
 	clients = sync.Map{}
-	er      = &errorResponder{}
 )
-
-type Client struct {
-	httpClient *http.Client
-	restCfg    *rest.Config
-}
 
 func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	start := time.Now() // TODO: refactor
@@ -54,17 +44,29 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Debugf("[%s] REQ OK t=%s %+v", tunnelID, timeout, req)
+	log.Debugf("[%s] REQ OK t=%s %s", tunnelID, timeout, target.String())
 
-	client, _, err := s.GetClientFromKubeconfig(tunnelID, timeout)
+	client, err := s.GetClientFromKubeconfig(tunnelID, timeout)
 	if err != nil {
 		log.Errorf("Error getting client for tunnel %s: %s", tunnelID, err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	// Create proxy and set the transport to remotedialer client
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Transport = client.Transport
+	proxy.ModifyResponse = func(r *http.Response) error {
+		if r != nil {
+			code := fmt.Sprintf("%d", r.StatusCode)
+			metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
+		}
+		return nil
+	}
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		metrics.ProxiedHttpResponseCounter.WithLabelValues("502").Inc()
+		log.Errorf("[%s] REQ failed: %v", tunnelID, err)
+	}
 	// Modify the Director function to change the request
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -74,30 +76,18 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		req.URL.Path = target.Path
 		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
 	}
-	proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
-		log.Errorf("Proxy error: %v", err)
-		rw.WriteHeader(http.StatusBadGateway)
-		rw.Write([]byte("Bad Gateway"))
-	}
 	proxy.ServeHTTP(rw, req)
-	log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
-
-	code := rw.Header().Get("Status")
-	if code == "" {
-		code = fmt.Sprintf("%d", http.StatusOK)
-	}
-	metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
-
+	log.Debugf("[%s] RESP RECEIVED: %v", tunnelID, rw)
 	duration := time.Since(start).Seconds()
 	metrics.RequestLatency.Observe(duration)
 }
 
-func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client, *rest.Config, error) {
+func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http.Client, error) {
 	// Check if the client is already cached
 	key := fmt.Sprintf("%s/%s", tunnelID, timeout)
 	client, ok := clients.Load(key)
 	if ok {
-		return client.(*Client).httpClient, client.(*Client).restCfg, nil
+		return client.(*http.Client), nil
 	}
 
 	start := time.Now() // TODO: refactor
@@ -107,7 +97,7 @@ func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client
 	metrics.KubeconfigRetrievalDuration.Observe(duration)
 	if err != nil {
 		log.Errorf("Unable to get kubeconfig for %s: %v", tunnelID, err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Set the server URL to the default kubeapi service URL
@@ -120,56 +110,24 @@ func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client
 	bytesCfg, err := clientcmd.Write(*cfg)
 	if err != nil {
 		log.Errorf("Unable to write kubeconfig for %s: %v", tunnelID, err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	restCfg, err := clientcmd.RESTConfigFromKubeConfig(bytesCfg)
 	if err != nil || restCfg == nil {
 		log.Errorf("Unable to create client config %s: %v", tunnelID, err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	restCfg.Dial = s.remotedialer.Dialer(tunnelID)
+
 	// Now create a new HTTP client with the rest config
 	httpClient, err := rest.HTTPClientFor(restCfg)
 	if err != nil {
 		log.Errorf("Unable to create HTTP client for %s: %v", tunnelID, err)
-		return nil, nil, err
-	}
-
-	newClient := &Client{
-		httpClient: httpClient,
-		restCfg:    restCfg,
-	}
-	clients.Store(key, newClient)
-	return httpClient, restCfg, nil
-}
-
-func makeUpgradeTransport(config *rest.Config, rt http.RoundTripper) (proxy.UpgradeRequestRoundTripper, error) {
-	transportConfig, err := config.TransportConfig()
-	if err != nil {
 		return nil, err
 	}
 
-	upgrader, err := transport.HTTPWrappersForConfig(transportConfig, proxy.MirrorRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return proxy.NewUpgradeRequestRoundTripper(rt, upgrader), nil
-}
-
-func (s *Server) cleanupUnusedHttpClients() {
-	log.Debug("cleaning unused http clients")
-	clients.Range(func(key, value any) bool {
-		clientName := key.(string)
-		// remove the timeout from the key to get the tunnel ID
-		tunnelId := strings.Split(clientName, "/")[0]
-		if !s.remotedialer.HasSession(tunnelId) {
-			log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
-			clients.Delete(clientName)
-			log.Info("finished removing unused http client")
-		}
-		return true
-	})
+	clients.Store(key, httpClient)
+	return httpClient, nil
 }

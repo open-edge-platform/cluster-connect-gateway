@@ -146,6 +146,7 @@ func NewServer(options ...ServerOptions) (s *Server, err error) {
 }
 
 func (s *Server) Run() error {
+/*
 	if s.cleanupTicker != nil {
 		go func() {
 			log.Debug("starting routine to clean-up unused http clients")
@@ -154,7 +155,7 @@ func (s *Server) Run() error {
 			}
 		}()
 	}
-
+*/
 	log.Infof("Listening on %s", s.listenAddr)
 	if err := http.ListenAndServe(s.listenAddr, s.router); err != nil {
 		return err
