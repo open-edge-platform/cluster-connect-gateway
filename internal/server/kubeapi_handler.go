@@ -78,17 +78,15 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	proxy.Transport = &LoggingTransport{
 		Transport: client.Transport, // Use the existing transport
 	}
-	proxy.ModifyResponse = func(r *http.Response) error {
-		if r != nil {
-			code := fmt.Sprintf("%d", r.StatusCode)
-			metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
-		}
-		return nil
+
+	// Log transport details
+	if httpTransport, ok := client.Transport.(*http.Transport); ok {
+		log.Infof("Transport details: ForceAttemptHTTP2=%v, MaxIdleConns=%d, IdleConnTimeout=%s",
+			httpTransport.ForceAttemptHTTP2, httpTransport.MaxIdleConns, httpTransport.IdleConnTimeout)
+	} else {
+		log.Warn("Transport is not of type *http.Transport")
 	}
-	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		metrics.ProxiedHttpResponseCounter.WithLabelValues("502").Inc()
-		log.Errorf("[%s] REQ failed: %v", tunnelID, err)
-	}
+
 	// Modify the Director function to change the request
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -109,6 +107,20 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 
 		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
 	}
+
+	proxy.ModifyResponse = func(r *http.Response) error {
+		if r != nil {
+			code := fmt.Sprintf("%d", r.StatusCode)
+			metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
+		}
+		return nil
+	}
+
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		metrics.ProxiedHttpResponseCounter.WithLabelValues("502").Inc()
+		log.Debugf("[%s] REQ failed: %v", tunnelID, err)
+	}
+
 	proxy.ServeHTTP(rw, req)
 	log.Debugf("[%s] RESP RECEIVED: %v", tunnelID, rw)
 	duration := time.Since(start).Seconds()
