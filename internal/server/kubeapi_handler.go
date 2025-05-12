@@ -28,23 +28,6 @@ var (
 	clients = sync.Map{}
 )
 
-type LoggingTransport struct {
-	Transport http.RoundTripper
-}
-
-func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Debugf("Request: Method=%s, URL=%s, Headers=%+v, ProtoMajor: %v", req.Method, req.URL.String(), req.Header, req.ProtoMajor)
-
-	// Perform the actual request
-	resp, err := lt.Transport.RoundTrip(req)
-	if err != nil {
-		log.Errorf("Transport error: %v", err)
-		return nil, err
-	}
-
-	log.Infof("Response: Status=%s, Headers=%v", resp.Status, resp.Header)
-	return resp, nil
-}
 func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	start := time.Now() // TODO: refactor
 	timeout := req.URL.Query().Get("timeout")
@@ -62,7 +45,7 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Debugf("[%s] REQ OK t=%s %s", tunnelID, timeout, target.String())
+	log.Debugf("[%s] REQ OK t=%s target: %s, req: %+v", tunnelID, timeout, target.String(), req)
 
 	client, err := s.GetClientFromKubeconfig(tunnelID, timeout)
 	if err != nil {
@@ -74,18 +57,7 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	// Create proxy and set the transport to remotedialer client
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
-	// Wrap the transport with LoggingTransport
-	proxy.Transport = &LoggingTransport{
-		Transport: client.Transport, // Use the existing transport
-	}
-
-	// Log transport details
-	if httpTransport, ok := client.Transport.(*http.Transport); ok {
-		log.Infof("Transport details: ForceAttemptHTTP2=%v, MaxIdleConns=%d, IdleConnTimeout=%s",
-			httpTransport.ForceAttemptHTTP2, httpTransport.MaxIdleConns, httpTransport.IdleConnTimeout)
-	} else {
-		log.Warn("Transport is not of type *http.Transport")
-	}
+	proxy.Transport = client.Transport // Use the existing transport
 
 	// Modify the Director function to change the request
 	originalDirector := proxy.Director
@@ -98,7 +70,7 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		// Preserve the Upgrade header for HTTP/1.1 requests
 		if req.ProtoMajor == 1 {
 			if upgrade := req.Header.Get("Upgrade"); upgrade != "" {
-				log.Infof("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
+				log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
 			}
 		} else {
 			// Remove the Upgrade header for HTTP/2 requests
