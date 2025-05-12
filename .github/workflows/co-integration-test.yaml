@@ -46,5 +46,6 @@ jobs:
 
       - name: Run make test with additional config
         run: |
+          echo "PATH=$HOME/.asdf/shims:$PATH" >> $GITHUB_ENV
           cd cluster-tests
           ADDITIONAL_CONFIG="{\"components\":[{\"name\":\"cluster-connect-gateway\", \"skip-local-build\": false, \"git-repo\": {\"version\":\"${{ env.VERSION }}\"}}]}" make test
