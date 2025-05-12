@@ -28,6 +28,23 @@ var (
 	clients = sync.Map{}
 )
 
+type LoggingTransport struct {
+	Transport http.RoundTripper
+}
+
+func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	log.Infof("Request: Method=%s, URL=%s, Headers=%+v", req.Method, req.URL.String(), req.Header)
+
+	// Perform the actual request
+	resp, err := lt.Transport.RoundTrip(req)
+	if err != nil {
+		log.Errorf("Transport error: %v", err)
+		return nil, err
+	}
+
+	log.Infof("Response: Status=%s, Headers=%v", resp.Status, resp.Header)
+	return resp, nil
+}
 func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	start := time.Now() // TODO: refactor
 	timeout := req.URL.Query().Get("timeout")
@@ -56,7 +73,11 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 
 	// Create proxy and set the transport to remotedialer client
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	proxy.Transport = client.Transport
+
+	// Wrap the transport with LoggingTransport
+	proxy.Transport = &LoggingTransport{
+		Transport: client.Transport, // Use the existing transport
+	}
 	proxy.ModifyResponse = func(r *http.Response) error {
 		if r != nil {
 			code := fmt.Sprintf("%d", r.StatusCode)
