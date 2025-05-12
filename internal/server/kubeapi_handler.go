@@ -33,7 +33,7 @@ type LoggingTransport struct {
 }
 
 func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Infof("Request: Method=%s, URL=%s, Headers=%+v, ProtoMajor: %v", req.Method, req.URL.String(), req.Header, req.ProtoMajor)
+	log.Debugf("Request: Method=%s, URL=%s, Headers=%+v, ProtoMajor: %v", req.Method, req.URL.String(), req.Header, req.ProtoMajor)
 
 	// Perform the actual request
 	resp, err := lt.Transport.RoundTrip(req)
