@@ -76,8 +76,15 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		req.Host = target.Host
 		req.URL.Path = target.Path
 
-		// Remove the Upgrade header to avoid HTTP/2 conflicts
-		req.Header.Del("Upgrade")
+		// Preserve the Upgrade header for HTTP/1.1 requests
+		if req.ProtoMajor == 1 {
+			if upgrade := req.Header.Get("Upgrade"); upgrade != "" {
+				log.Infof("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
+			}
+		} else {
+			// Remove the Upgrade header for HTTP/2 requests
+			req.Header.Del("Upgrade")
+		}
 
 		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
 	}
