@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/atomix/dazl"
 	"github.com/gorilla/mux"
@@ -75,6 +75,10 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		req.URL.Scheme = target.Scheme
 		req.Host = target.Host
 		req.URL.Path = target.Path
+
+		// Remove the Upgrade header to avoid HTTP/2 conflicts
+		req.Header.Del("Upgrade")
+
 		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
 	}
 	proxy.ServeHTTP(rw, req)
@@ -134,16 +138,16 @@ func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http
 }
 
 func (s *Server) cleanupUnusedHttpClients() {
-        log.Debug("cleaning unused http clients")
-        clients.Range(func(key, value any) bool {
-                clientName := key.(string)
-                // remove the timeout from the key to get the tunnel ID
-                tunnelId := strings.Split(clientName, "/")[0]
-                if !s.remotedialer.HasSession(tunnelId) {
-                        log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
-                        clients.Delete(clientName)
-                        log.Info("finished removing unused http client")
-                }
-                return true
-        })
+	log.Debug("cleaning unused http clients")
+	clients.Range(func(key, value any) bool {
+		clientName := key.(string)
+		// remove the timeout from the key to get the tunnel ID
+		tunnelId := strings.Split(clientName, "/")[0]
+		if !s.remotedialer.HasSession(tunnelId) {
+			log.Infof("session %s doesn't exist anymore, will proceed to remove client %s", tunnelId, clientName)
+			clients.Delete(clientName)
+			log.Info("finished removing unused http client")
+		}
+		return true
+	})
 }
