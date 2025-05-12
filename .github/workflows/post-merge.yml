@@ -32,4 +32,4 @@ jobs:
       run_docker_push: true
       run_helm_build: true
       run_helm_push: true
-    secrets: inherit
+    secrets: inherit  # zizmor: ignore[secrets-inherit]
