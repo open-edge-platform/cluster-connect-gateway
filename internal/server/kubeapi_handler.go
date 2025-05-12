@@ -133,12 +133,18 @@ func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http
 
 	restCfg.Dial = s.remotedialer.Dialer(tunnelID)
 
-	// Now create a new HTTP client with the rest config
-	httpClient, err := rest.HTTPClientFor(restCfg)
+	// Disable HTTP/2 in the transport
+	transport, err := rest.TransportFor(restCfg)
 	if err != nil {
-		log.Errorf("Unable to create HTTP client for %s: %v", tunnelID, err)
+		log.Errorf("Unable to create transport for %s: %v", tunnelID, err)
 		return nil, err
 	}
+	if httpTransport, ok := transport.(*http.Transport); ok {
+		httpTransport.ForceAttemptHTTP2 = false
+	}
+
+	// Now create a new HTTP client with the rest config
+	httpClient := &http.Client{Transport: transport}
 
 	clients.Store(key, httpClient)
 	return httpClient, nil
