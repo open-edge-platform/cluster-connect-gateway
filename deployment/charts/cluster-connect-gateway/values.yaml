@@ -29,11 +29,11 @@ security: # TODO move variables to this section to remove duplicates
 gateway:
   image:
     registry:
-      name: registry-rs.edgeorchestration.intel.com
+      name: localhost:5000
     #  imagePullSecrets: []
-    repository: edge-orch/cluster/connect-gateway
+    repository: connect-gateway
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "1.1.1-dev-1"
 
   replicaCount: 1
 
@@ -134,13 +134,13 @@ openpolicyagent:
 controller:
   image:
     registry:
-      name: registry-rs.edgeorchestration.intel.com
+      name: localhost:5000
     #  imagePullSecrets: []
-    repository: edge-orch/cluster/connect-controller #TODO: Add correct repository name
+    repository: connect-controller #TODO: Add correct repository name
     # This sets the pull policy for images.
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: ""
+    tag: "1.1.1-dev-1"
 
   metrics:
     enabled: true
