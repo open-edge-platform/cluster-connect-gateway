@@ -36,7 +36,7 @@ jobs:
         with:
           repository: open-edge-platform/cluster-tests
           path: cluster-tests
-          ref: "b107340a39582e0e1a50135f1f0e35848ee9e729"
+          ref: "b107340a39582e0e1a50135f1f0e35848ee9e729" # Should be bumped back to main, once cluster-tests PR merges.
           token: ${{ secrets.SYS_ORCH_GITHUB }}
 
       - name: Bootstrap CI environment
