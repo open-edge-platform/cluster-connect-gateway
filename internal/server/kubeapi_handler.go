@@ -167,7 +167,6 @@ func (s *Server) GetClientFromKubeconfig(tunnelID string, timeout string) (*http
 	}
 	if httpTransport, ok := transport.(*http.Transport); ok {
 		httpTransport.ForceAttemptHTTP2 = false
-		httpTransport.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
 	}
 
 	// Now create a new HTTP client with the rest config
