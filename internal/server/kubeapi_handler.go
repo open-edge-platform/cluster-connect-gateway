@@ -4,7 +4,6 @@
 package server
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
