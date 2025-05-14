@@ -4,6 +4,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -74,6 +75,19 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 
 	// Create proxy and set the transport to remotedialer client
 	proxy := httputil.NewSingleHostReverseProxy(target)
+
+	// We must disable HTTP/2 for the proxy to work properly with remote kubeapi when there is need to upgade to SPDY/3.1
+	// According to the docs in https://pkg.go.dev/net/http#hdr-HTTP_2
+	//
+	//    Programs that must disable HTTP/2 can do so by setting Transport.TLSNextProto (for clients) or
+	//    Server.TLSNextProto (for servers) to a non-nil, empty map.
+	//	https://pkg.go.dev/net/http#hdr-HTTP_2
+	if disableHttp2 := isSPDY(req); disableHttp2 {
+		log.Debugf("[%s] Disabling HTTP/2 for request due to SPDY upgrade", tunnelID)
+		if httpTransport, ok := client.Transport.(*http.Transport); ok {
+			httpTransport.TLSNextProto = map[string]func(authority string, c *tls.Conn) http.RoundTripper{}
+		}
+	}
 
 	// Wrap the transport with LoggingTransport
 	proxy.Transport = &LoggingTransport{
@@ -189,4 +203,8 @@ func (s *Server) cleanupUnusedHttpClients() {
 		}
 		return true
 	})
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get("Upgrade")), "spdy/")
 }
