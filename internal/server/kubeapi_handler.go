@@ -4,6 +4,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -62,6 +63,13 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Check for SPDY protocol and disable HTTP/2 if present
+	if isSPDY(req) {
+		if httpTransport, ok := client.Transport.(*http.Transport); ok {
+			httpTransport.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
+		}
+	}
+
 	// Create proxy and set the transport to remotedialer client
 	proxy := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
 
@@ -69,6 +77,7 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		return
 	}
+
 	proxy.UpgradeTransport = upgradeTransport
 
 	req.URL.Scheme = target.Scheme
@@ -169,4 +178,8 @@ func (s *Server) cleanupUnusedHttpClients() {
 		}
 		return true
 	})
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get("Upgrade")), "spdy/")
 }
