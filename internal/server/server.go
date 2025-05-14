@@ -136,6 +136,7 @@ func NewServer(options ...ServerOptions) (s *Server, err error) {
 		if err != nil {
 			log.Fatalf("Failed to create cert manager: %v", err)
 		}
+
 	}
 
 	server.remotedialer = remotedialer.New(server.authorizer, server.errorWriter)

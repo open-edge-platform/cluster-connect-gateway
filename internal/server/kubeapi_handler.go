@@ -22,6 +22,7 @@ import (
 
 const (
 	kubeApiEndpoint = "https://kubernetes.default.svc"
+	UpgradeHeader   = "Upgrade"
 )
 
 var (
@@ -104,12 +105,12 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 
 		// Preserve the Upgrade header for HTTP/1.1 requests
 		if req.ProtoMajor == 1 {
-			if upgrade := req.Header.Get("Upgrade"); upgrade != "" {
+			if upgrade := req.Header.Get(UpgradeHeader); upgrade != "" {
 				log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
 			}
 		} else {
 			// Remove the Upgrade header for HTTP/2 requests
-			req.Header.Del("Upgrade")
+			req.Header.Del(UpgradeHeader)
 		}
 
 		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
@@ -206,5 +207,5 @@ func (s *Server) cleanupUnusedHttpClients() {
 }
 
 func isSPDY(r *http.Request) bool {
-	return strings.HasPrefix(strings.ToLower(r.Header.Get("Upgrade")), "spdy/")
+	return strings.HasPrefix(strings.ToLower(r.Header.Get(UpgradeHeader)), "spdy/")
 }
