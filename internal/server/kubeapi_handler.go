@@ -115,6 +115,7 @@ func (s *Server) handleWebSocketOrHTTP(rw http.ResponseWriter, req *http.Request
 				log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
 			}
 		} else {
+			// Remove the Upgrade header for HTTP/2 as HTTP/2 does not support it
 			req.Header.Del(UpgradeHeader)
 		}
 	}
