@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+dependencies:
+- name: connect-agent
+  repository: file://./charts/connect-agent
+  version: 0.1.0
+digest: sha256:cfa1f8f1323909ade1c2ac06c3e2ab3e634a1ca9bdda3eb8775e7d98b17d32ec
+generated: "2025-04-25T11:36:03.022423105Z"

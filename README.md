@@ -1,4 +1,16 @@
-# Welcome to the Cluster Connect Gateway
+# Cluster Connect Gateway
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/open-edge-platform/cluster-connect-gateway/badge)](https://scorecard.dev/viewer/?uri=github.com/open-edge-platform/cluster-connect-gateway)
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Get Started](#get-started)
+- [Develop](#develop)
+- [Contribute](#contribute)
+- [Community and Support](#community-and-support)
+- [License](#license)
 
 ## Overview
 
@@ -13,69 +25,24 @@ Key features include:
 - **Cluster API integration**: Seamlessly work with Cluster API.
 - **Intel Open Edge Platform integration**: Seamlessly work with Intel® Open Edge Platform.
 
+Read more about Cluster Connect Gateway in the [Edge Cluster Orchestrator Developer Guide][cluster-orch-dev-guide-url] for internals and software architecture.
+
 ## Get Started
 
-Install Cluster Connect Gateway operator.
-
-```
-helm install -n orch-system --create-namespace deployment/charts/cluster-connect-gateway-crd
-helm install -n orch-system --create-namespace deployment/charts/cluster-connect-gateway
-```
-
-Create a ClusterConnect for the edge cluster.
-
-```
-cat > example.yaml << "EOF"
-apiVersion: cluster.edge-orchestrator.intel.com/v1alpha1
-kind: ClusterConnect
-metadata:
-  name: example-cluster-connect
-spec:
-  serverCertRef:
-    apiVersion: v1
-    kind: Secret
-    name: example-cluster-ca
-    namespace: default
-  clientCertRef:
-    apiVersion: v1
-    kind: Secret
-    name: example-cluster-cca
-    namespace: default
-
-kubectl apply -f example.yaml
-```
-
-Get connect-agent pod manifest.
-
-```
-kubectl get clusterconnect example-cluster-connect \
-    -o go-template="{{ if .status.ready }}{{ .status.agentManifest }}{{ end }}" \
-    > connect-agent.yaml
-```
-
-Deploy connect-agent to the edge cluster.
-
-```
-kubectl apply -f connect-agent.yaml
-```
-
-Another way to try out Cluster Connect Gateway is by using the Intel® Open Edge Platform. Refer to the [Documentation](https://literate-adventure-7vjeyem.pages.github.io/edge_orchestrator/user_guide_main/content/user_guide/get_started_guide/gsg_content.html) to get started with Intel® Open Edge Platform.
+The recommended way to try out the Cluster Connect Gateway is by using the Edge Orchestrator.
+Refer to the [Getting Started Guide](https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/get_started_guide/index.html) to get started with the Edge Orchestrator.
 
 ## Develop
 
-If you are interested in contributing to the development of Cluster Connect Gateway, follow these steps to get started:
+If you are interested in contributing to the development of Cluster Connect Gateway, you will need an environment where you can use it to create and delete clusters.  
+
+The [cluster-tests](https://github.com/open-edge-platform/cluster-tests) repo provides a lightweight environment for integration testing of Cluster Connect Gateway as well as other Edge Orchestrator components related to cluster management. Clone that repo, change into the cluster-tests directory, and run:
 
 ```
-make run-e2e-and-keep
+make test
 ```
 
-This command creates a KinD cluster, deploy cert-manager, Cluster API operator and providers, and build and deploy Cluster Connect Gateway from your local repository.
-
-After making changes, rebuild and deploy the updated code.
-
-```
-make redeploy
-```
+This command creates a KinD cluster and deploys cert-manager, Cluster API operator, CAPI Provider for Intel, Cluster Manager, and Cluster Connect Gateway. It then creates and deletes a cluster inside a Kubernetes pod. Consult the cluster-tests [README](https://github.com/open-edge-platform/cluster-tests/blob/main/README.md) for details on how to test your code in this environment.
 
 ## Contribute
 
@@ -91,10 +58,13 @@ make license
 
 ## Community and Support
 
-To learn more about the project, its community, and governance, visit the Edge Orchestrator Community. 
-For support, start with Troubleshooting or contact us. 
+To learn more about the project, its community, and governance, visit the [Edge Orchestrator Community](https://docs.openedgeplatform.intel.com/edge-manage-docs/main/index.html). 
+For support, start with [Troubleshooting](https://docs.openedgeplatform.intel.com/edge-manage-docs/main/developer_guide/troubleshooting/index.html) or contact us. 
 
 ## License
 
 Cluster Connect Gateway is licensed under [Apache 2.0 License](LICENSES/Apache-2.0.txt)
 
+Last Updated Date: April 16, 2025
+
+[cluster-orch-dev-guide-url]: https://docs.openedgeplatform.intel.com/edge-manage-docs/main/developer_guide/cluster_orch/index.html

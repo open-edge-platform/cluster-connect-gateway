@@ -24,7 +24,7 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/component: gateway
-      {{- include "cluster-connect-gateway.labels" . | nindent 6 }}
+      {{- include "cluster-connect-gateway.selectorLabels" . | nindent 6 }}
   replicas: {{ .Values.gateway.replicaCount }}
   template:
     metadata:
@@ -43,6 +43,10 @@ spec:
           imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
           command: [ "/connect-gateway" ]
           env:
+            {{- if  .Values.gateway.metrics.enable }}
+            - name: CATTLE_PROMETHEUS_METRICS
+              value: "true"
+            {{- end }}
             {{- if eq .Values.gateway.logLevel "debug" }}
             - name: CATTLE_TUNNEL_DATA_DEBUG
               value: "true"
