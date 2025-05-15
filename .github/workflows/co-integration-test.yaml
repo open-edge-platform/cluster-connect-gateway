@@ -36,7 +36,7 @@ jobs:
         with:
           repository: open-edge-platform/cluster-tests
           path: cluster-tests
-          ref: "b107340a39582e0e1a50135f1f0e35848ee9e729" # Should be bumped back to main, once cluster-tests PR merges.
+          ref: "main"
           token: ${{ secrets.SYS_ORCH_GITHUB }}
 
       - name: Bootstrap CI environment
@@ -46,6 +46,5 @@ jobs:
 
       - name: Run make test with additional config
         run: |
-          echo "PATH=$HOME/.asdf/shims:$PATH" >> $GITHUB_ENV
           cd cluster-tests
           ADDITIONAL_CONFIG="{\"components\":[{\"name\":\"cluster-connect-gateway\", \"skip-local-build\": false, \"git-repo\": {\"version\":\"${{ env.VERSION }}\"}}]}" make test
