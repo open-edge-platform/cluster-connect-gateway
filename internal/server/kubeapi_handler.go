@@ -71,15 +71,16 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	// Parse the target URL
 	target, err := url.Parse(fmt.Sprintf("%s/%s", kubeApiEndpoint, vars["kubernetes_uri"]))
 	if err != nil {
-		log.Errorf("[%s] Failed to parse target URL: %v", tunnelID, err)
-		http.Error(rw, "Invalid target URL", http.StatusInternalServerError)
+		log.Errorf("Error parsing URL %s: %s", target, err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	log.Debugf("[%s] REQ OK t=%s %+v", tunnelID, timeout, req)
 
 	client, cfg, err := s.GetClientFromKubeconfig(tunnelID, timeout)
 	if err != nil {
-		log.Errorf("[%s] Failed to get client: %v", tunnelID, err)
-		http.Error(rw, "Failed to get client", http.StatusInternalServerError)
+		log.Errorf("Error getting client for tunnel %s: %s", tunnelID, err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -101,54 +102,6 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	recordMetrics(rw, start)
 }
 
-func (s *Server) handleWebSocketOrHTTP(rw http.ResponseWriter, req *http.Request, target *url.URL, client *http.Client, tunnelID string) {
-	proxyHandler := httputil.NewSingleHostReverseProxy(target)
-	proxyHandler.Transport = &LoggingTransport{Transport: client.Transport}
-
-	proxyHandler.Director = func(req *http.Request) {
-		req.URL.Scheme = target.Scheme
-		req.Host = target.Host
-		req.URL.Path = target.Path
-
-		if req.ProtoMajor == 1 {
-			if upgrade := req.Header.Get(UpgradeHeader); upgrade != "" {
-				log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
-			}
-		} else {
-			// Remove the Upgrade header for HTTP/2 as HTTP/2 does not support it
-			req.Header.Del(UpgradeHeader)
-		}
-	}
-
-	proxyHandler.ModifyResponse = func(r *http.Response) error {
-		if r != nil {
-			log.Debugf("[%s] Response received: Status=%d", tunnelID, r.StatusCode)
-		}
-		return nil
-	}
-
-	proxyHandler.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Errorf("[%s] Proxy error: %v", tunnelID, err)
-		http.Error(w, "Bad Gateway", http.StatusBadGateway)
-	}
-
-	proxyHandler.ServeHTTP(rw, req)
-}
-
-func (s *Server) handleSPDY(rw http.ResponseWriter, req *http.Request, target *url.URL, client *http.Client, cfg *rest.Config, tunnelID string) {
-	proxyHandler := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
-
-	upgradeTransport, err := makeUpgradeTransport(cfg, client.Transport)
-	if err != nil {
-		log.Errorf("[%s] Failed to create upgrade transport: %v", tunnelID, err)
-		http.Error(rw, "Failed to create upgrade transport", http.StatusInternalServerError)
-		return
-	}
-	proxyHandler.UpgradeTransport = upgradeTransport
-
-	proxyHandler.ServeHTTP(rw, req)
-}
-
 func setRequestURL(req *http.Request, target *url.URL) {
 	req.URL.Scheme = target.Scheme
 	req.Host = target.Host
@@ -165,6 +118,75 @@ func recordMetrics(rw http.ResponseWriter, start time.Time) {
 	duration := time.Since(start).Seconds()
 	metrics.RequestLatency.Observe(duration)
 }
+
+func (s *Server) handleWebSocketOrHTTP(rw http.ResponseWriter, req *http.Request, target *url.URL, client *http.Client, tunnelID string) {
+	// Create proxy and set the transport to remotedialer client
+	proxyHandler := httputil.NewSingleHostReverseProxy(target)
+
+	// Wrap the transport with LoggingTransport
+	proxyHandler.Transport = &LoggingTransport{
+		Transport: client.Transport, // Use the existing transport
+	}
+
+	// Modify the Director function to change the request
+	originalDirector := proxyHandler.Director
+	proxyHandler.Director = func(req *http.Request) {
+		originalDirector(req)
+		req.URL.Scheme = target.Scheme
+		req.Host = target.Host
+		req.URL.Path = target.Path
+
+		// Preserve the Upgrade header for HTTP/1.1 requests
+		if req.ProtoMajor == 1 {
+			if upgrade := req.Header.Get(UpgradeHeader); upgrade != "" {
+				log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
+			}
+		} else {
+			// Remove the Upgrade header for HTTP/2 requests
+			req.Header.Del(UpgradeHeader)
+		}
+
+		log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
+	}
+
+	proxyHandler.ModifyResponse = func(r *http.Response) error {
+		if r != nil {
+			code := fmt.Sprintf("%d", r.StatusCode)
+			metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
+		}
+		return nil
+	}
+
+	proxyHandler.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		metrics.ProxiedHttpResponseCounter.WithLabelValues("502").Inc()
+		log.Debugf("[%s] REQ failed: %v", tunnelID, err)
+	}
+
+	log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
+	proxyHandler.ServeHTTP(rw, req)
+	log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
+}
+
+func (s *Server) handleSPDY(rw http.ResponseWriter, req *http.Request, target *url.URL, client *http.Client, cfg *rest.Config, tunnelID string) {
+	// Create proxy and set the transport to remotedialer client
+	proxyHandler := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
+
+	upgradeTransport, err := makeUpgradeTransport(cfg, client.Transport)
+	if err != nil {
+		return
+	}
+	proxyHandler.UpgradeTransport = upgradeTransport
+
+	req.URL.Scheme = target.Scheme
+	req.Host = target.Host
+	req.URL.Path = target.Path
+	log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
+
+	proxyHandler.ServeHTTP(rw, req)
+	log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
+
+}
+
 func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client, *rest.Config, error) {
 	// Check if the client is already cached
 	key := fmt.Sprintf("%s/%s", tunnelID, timeout)
@@ -173,7 +195,7 @@ func (s *Server) GetClientFromKubeconfig(tunnelID, timeout string) (*http.Client
 		return client.(*Client).httpClient, client.(*Client).restCfg, nil
 	}
 
-	start := time.Now() // TODO: refactor
+	start := time.Now()
 	// Get kubeconfig from the Secret if not
 	cfg, err := s.kubeclient.GetKubeconfig(tunnelID)
 	duration := time.Since(start).Seconds()
@@ -245,4 +267,8 @@ func (s *Server) cleanupUnusedHttpClients() {
 		}
 		return true
 	})
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get(UpgradeHeader)), SpdyPrefix)
 }
