@@ -4,9 +4,9 @@
 package server
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"sync"
@@ -37,6 +37,24 @@ type Client struct {
 	restCfg    *rest.Config
 }
 
+type LoggingTransport struct {
+	Transport http.RoundTripper
+}
+
+func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	log.Debugf("Request: Method=%s, URL=%s, ProtoMajor: %v", req.Method, req.URL.String(), req.ProtoMajor)
+
+	// Perform the actual request
+	resp, err := lt.Transport.RoundTrip(req)
+	if err != nil {
+		log.Errorf("Transport error: %v", err)
+		return nil, err
+	}
+
+	log.Debugf("Response: Status=%s, Headers=%v", resp.Status, resp.Header)
+	return resp, nil
+}
+
 func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	start := time.Now() // TODO: refactor
 	timeout := req.URL.Query().Get("timeout")
@@ -63,30 +81,75 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Check for SPDY protocol and disable HTTP/2 if present
-	if isSPDY(req) {
-		if httpTransport, ok := client.Transport.(*http.Transport); ok {
-			httpTransport.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
-		}
-	}
-
-	// Create proxy and set the transport to remotedialer client
-	proxy := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
-
-	upgradeTransport, err := makeUpgradeTransport(cfg, client.Transport)
-	if err != nil {
-		return
-	}
-
-	proxy.UpgradeTransport = upgradeTransport
-
 	req.URL.Scheme = target.Scheme
 	req.Host = target.Host
 	req.URL.Path = target.Path
-	log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
 
-	proxy.ServeHTTP(rw, req)
-	log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
+	upgradeHeader := strings.ToLower(req.Header.Get("Upgrade"))
+	if upgradeHeader == "websocket" || upgradeHeader == "" {
+		// Create proxy and set the transport to remotedialer client
+		proxyHandler := httputil.NewSingleHostReverseProxy(target)
+
+		// Wrap the transport with LoggingTransport
+		proxyHandler.Transport = &LoggingTransport{
+			Transport: client.Transport, // Use the existing transport
+		}
+
+		// Modify the Director function to change the request
+		originalDirector := proxyHandler.Director
+		proxyHandler.Director = func(req *http.Request) {
+			originalDirector(req)
+			req.URL.Scheme = target.Scheme
+			req.Host = target.Host
+			req.URL.Path = target.Path
+
+			// Preserve the Upgrade header for HTTP/1.1 requests
+			if req.ProtoMajor == 1 {
+				if upgrade := req.Header.Get("Upgrade"); upgrade != "" {
+					log.Debugf("[%s] Preserving Upgrade header: %s", tunnelID, upgrade)
+				}
+			} else {
+				// Remove the Upgrade header for HTTP/2 requests
+				req.Header.Del("Upgrade")
+			}
+
+			log.Debugf("[%s] REQ DONE: %v", tunnelID, req)
+		}
+
+		proxyHandler.ModifyResponse = func(r *http.Response) error {
+			if r != nil {
+				code := fmt.Sprintf("%d", r.StatusCode)
+				metrics.ProxiedHttpResponseCounter.WithLabelValues(code).Inc()
+			}
+			return nil
+		}
+
+		proxyHandler.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			metrics.ProxiedHttpResponseCounter.WithLabelValues("502").Inc()
+			log.Debugf("[%s] REQ failed: %v", tunnelID, err)
+		}
+
+		log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
+		proxyHandler.ServeHTTP(rw, req)
+		log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
+	} else if strings.HasPrefix(upgradeHeader, "spdy/") {
+		// Create proxy and set the transport to remotedialer client
+		proxyHandler := proxy.NewUpgradeAwareHandler(target, client.Transport, false, false, er)
+
+		upgradeTransport, err := makeUpgradeTransport(cfg, client.Transport)
+		if err != nil {
+			return
+		}
+		proxyHandler.UpgradeTransport = upgradeTransport
+
+		req.URL.Scheme = target.Scheme
+		req.Host = target.Host
+		req.URL.Path = target.Path
+		log.Debugf("[%s] REQ DONE: %+v", tunnelID, req)
+
+		proxyHandler.ServeHTTP(rw, req)
+		log.Debugf("[%s] RESP RECEIVED: %+v", tunnelID, rw)
+	}
 
 	code := rw.Header().Get("Status")
 	if code == "" {
