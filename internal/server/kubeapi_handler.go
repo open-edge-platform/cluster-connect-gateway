@@ -88,6 +88,15 @@ func (s *Server) KubeapiHandler(rw http.ResponseWriter, req *http.Request) {
 	setRequestURL(req, target)
 
 	upgradeHeader := strings.ToLower(req.Header.Get(UpgradeHeader))
+	// There are three cases:
+	// 1. WebSocket upgrade or HTTP/1.1 or HTTP/2  request
+	// 2. SPDY Upgrade request
+	// 3. Any other request (not supported)
+	// The 'proxy.NewUpgradeAwareHandler' seems to have issues websocket upgrade requests and such traffic
+	// is pushed to be handled via 'httputil.NewSingleHostReverseProxy'
+	// The neatest way to have handled this is to use the 'proxy.NewUpgradeAwareHandler' for all requests,
+	// but what we have seen is that it doesn't work well with websocket upgrade requests. The solution
+	// here works for now.
 	if upgradeHeader == Websocket || upgradeHeader == "" {
 		s.handleWebSocketOrHTTP(rw, req, target, client, tunnelID)
 	} else if strings.HasPrefix(upgradeHeader, SpdyPrefix) {
