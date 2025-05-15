@@ -242,7 +242,3 @@ func (s *Server) cleanupUnusedHttpClients() {
 		return true
 	})
 }
-
-func isSPDY(r *http.Request) bool {
-	return strings.HasPrefix(strings.ToLower(r.Header.Get("Upgrade")), "spdy/")
-}
