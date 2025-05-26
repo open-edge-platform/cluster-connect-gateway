@@ -43,6 +43,17 @@ const (
 	ReadyUnknownReason = "ReadyUnknown"
 )
 
+// ConnectionProbe condition and corresponding reasons.
+const (
+	ConnectionProbeCondition = "ConnectionProbe"
+
+	// ConnectionProbeFailedReason surfaces issues with the connection to the workload's cluster connect-agent.
+	ConnectionProbeFailedReason = "ProbeFailed"
+
+	// ConnectionProbeSucceededReason is used to report a working connection with the workload's cluster connect-agent.
+	ConnectionProbeSucceededReason = "ProbeSucceeded"
+)
+
 // ClusterConnectSpec defines the desired state of ClusterConnect.
 type ClusterConnectSpec struct {
 	// ClusterRef is an optional reference to a CAPI provider-specific resource that holds
@@ -76,10 +87,24 @@ type ClusterConnectStatus struct {
 	// +optional
 	AgentManifest string `json:"agentManifest,omitempty"`
 
+	// ConnectionProbe defines the state of the connection with connect-agent.
+	ConnectionProbe ConnectionProbeState `json:"connectionProbe,omitempty"`
+
 	// Conditions defines current connection state of the cluster.
 	// Known condition types are TBD.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type ConnectionProbeState struct {
+	// LastProbeTimestamp is the time when the health probe was executed last.
+	LastProbeTimestamp metav1.Time `json:"lastProbeTimestamp,omitempty"`
+
+	// LastProbeSuccessTimestamp is the time when the health probe was successfully executed last.
+	LastProbeSuccessTimestamp metav1.Time `json:"lastProbeSuccessTimestamp,omitempty"`
+
+	// ConsecutiveFailures is the number of consecutive health probe failures.
+	ConsecutiveFailures int `json:"consecutiveFailures,omitempty"`
 }
 
 // +kubebuilder:object:root=true
