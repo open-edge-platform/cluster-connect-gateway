@@ -13,6 +13,7 @@ import (
 	"github.com/atomix/dazl"
 	_ "github.com/atomix/dazl/zap"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,6 +39,7 @@ type Kubeclient interface {
 	InvalidateCerts(tunnelId string) error
 	GetKubeconfig(tunnelId string) (*api.Config, error)
 	InvalidateKubeconfig(tunnelId string) error
+	UpdateConnectionProbe(tunnelId string, hasSession bool) error
 }
 
 func NewInClusterClient() (Kubeclient, error) {
@@ -217,4 +219,30 @@ func (m *kubeclient) getServerCertFromSecret(cc *v1alpha1.ClusterConnect) (map[s
 		return nil, err
 	}
 	return secret.Data, nil
+}
+
+func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) error {
+	cc, err := m.getClusterConnect(tunnelId)
+	if err != nil {
+		log.Errorf("Failed to get cluster connect for tunnel %s: %v", tunnelId, err)
+		return err
+	}
+
+	cc.Status.ConnectionProbe.LastProbeTimestamp = metav1.Now()
+
+	if hasSession {
+		cc.Status.ConnectionProbe.LastProbeSuccessTimestamp = cc.Status.ConnectionProbe.LastProbeTimestamp
+		cc.Status.ConnectionProbe.ConsecutiveFailures = 0
+	} else {
+		cc.Status.ConnectionProbe.ConsecutiveFailures++
+	}
+
+	// modify clusterconnection with the health info
+	err = m.client.Status().Patch(context.Background(), cc, client.MergeFrom(cc.DeepCopy()))
+	if err != nil {
+		log.Errorf("Failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
+		return fmt.Errorf("failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
+	}
+
+	return nil
 }

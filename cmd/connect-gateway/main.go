@@ -65,6 +65,9 @@ func main() {
 	clientCleanupTicker := time.NewTicker(480 * time.Minute)
 	defer clientCleanupTicker.Stop()
 
+	connectionProbeTicker := time.NewTicker(1 * time.Minute)
+	defer connectionProbeTicker.Stop()
+
 	server, err := server.NewServer(
 		server.WithListenAddr(listenAddr),
 		server.WithAuth(enableAuth, opaAddress, opaPort),
@@ -73,6 +76,7 @@ func main() {
 		server.WithOIDCIssuerURL(oidcIssuerURL),
 		server.WithOIDCInsecureSkipVerify(oidcInsecureSkipVerify),
 		server.WithCleanupTicker(clientCleanupTicker),
+		server.WithConnectionProbeTicker(connectionProbeTicker),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create gateway server: %v", err)
