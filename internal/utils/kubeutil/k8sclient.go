@@ -228,6 +228,8 @@ func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) err
 		return err
 	}
 
+	beforeObj := cc.DeepCopy()
+
 	cc.Status.ConnectionProbe.LastProbeTimestamp = metav1.Now()
 
 	if hasSession {
@@ -240,7 +242,7 @@ func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) err
 	}
 
 	// modify clusterconnection with the health info
-	err = m.client.Status().Patch(context.Background(), cc, client.MergeFrom(cc.DeepCopy()))
+	err = m.client.Status().Patch(context.Background(), cc, client.MergeFrom(beforeObj))
 	if err != nil {
 		log.Errorf("Failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
 		return fmt.Errorf("failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
