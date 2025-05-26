@@ -285,6 +285,7 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	// 4) Set the connect-agent config to Cluster object
 	// 5) Wait until the Cluster object update is reconciled by Topology controller
 	// 6) Update kubeconfig secret
+	// 7) Monitor connection to the workload cluster
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
@@ -292,6 +293,7 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 		r.reconcileClusterSpec,
 		r.reconcileTopology,
 		r.reconcileKubeconfig,
+		r.reconcileConnectionProbe,
 	}
 
 	errs := []error{}
@@ -555,6 +557,24 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 	}
 
 	setKubeconfigReadyConditionTrue(cc)
+	return nil
+}
+
+func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
+	log.FromContext(ctx)
+
+	// Return early, if the ClusterConnect doesn't have last connectionProbe timestamp set.
+	if cc.Status.ConnectionProbe.LastProbeTimestamp.IsZero() {
+		return nil
+	}
+
+	// TODO: parametrize the threshold for consecutive failures.
+	if cc.Status.ConnectionProbe.ConsecutiveFailures > 5 {
+		setConnectionProbeConditionTrue(cc, "Connection probe is successful")
+	} else {
+		msg := fmt.Sprintf("Remote connection probe failed, consecutive failures: %d", cc.Status.ConnectionProbe.ConsecutiveFailures)
+		setConnectionProbeConditionFalse(cc, msg)
+	}
 	return nil
 }
 
