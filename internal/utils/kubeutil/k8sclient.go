@@ -233,8 +233,10 @@ func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) err
 	if hasSession {
 		cc.Status.ConnectionProbe.LastProbeSuccessTimestamp = cc.Status.ConnectionProbe.LastProbeTimestamp
 		cc.Status.ConnectionProbe.ConsecutiveFailures = 0
+		log.Debug("Connection probe successful for tunnel", tunnelId)
 	} else {
 		cc.Status.ConnectionProbe.ConsecutiveFailures++
+		log.Debugf("Connection probe failed for tunnel %s, consecutive failures: %d", tunnelId, cc.Status.ConnectionProbe.ConsecutiveFailures)
 	}
 
 	// modify clusterconnection with the health info
@@ -243,6 +245,8 @@ func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) err
 		log.Errorf("Failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
 		return fmt.Errorf("failed to patch cluster connect status for tunnel %s: %v", tunnelId, err)
 	}
+
+	log.Debugf("Updated connection probe for tunnel %s", tunnelId)
 
 	return nil
 }
