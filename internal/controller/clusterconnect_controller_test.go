@@ -78,7 +78,7 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 			}, timeout, interval).Should(BeTrue())
 
 			// Ensure there are three conditions and status.ready is true.
-			Expect(cc.Status.Conditions).To(HaveLen(3))
+			Expect(cc.Status.Conditions).To(HaveLen(4))
 			Expect(cc.Status.Ready).To(BeTrue())
 		})
 	})

@@ -243,6 +243,11 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 	// Check if conditions are initialized, if not, initialize them with Unknown.
 	if len(cc.Status.Conditions) == 0 {
 		initConditions(cc)
+		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
+			LastProbeTimestamp:        metav1.Time{},
+			LastProbeSuccessTimestamp: metav1.Time{},
+			ConsecutiveFailures:       0,
+		}
 	}
 
 	// Set status.ready to true if all the conditions are true.
@@ -289,11 +294,11 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
+		r.reconcileConnectionProbe,
 		r.reconcileControlPlaneEndpoint,
 		r.reconcileClusterSpec,
 		r.reconcileTopology,
 		r.reconcileKubeconfig,
-		r.reconcileConnectionProbe,
 	}
 
 	errs := []error{}
@@ -562,18 +567,21 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 
 func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
 	log.FromContext(ctx)
-
-	// Return early, if the ClusterConnect doesn't have last connectionProbe timestamp set.
-	if cc.Status.ConnectionProbe.LastProbeTimestamp.IsZero() {
-		return nil
+	// Initialize ConnectionProbe if not already set.
+	if cc.Status.ConnectionProbe == (v1alpha1.ConnectionProbeState{}) {
+		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
+			LastProbeTimestamp:        metav1.Time{},
+			LastProbeSuccessTimestamp: metav1.Time{},
+			ConsecutiveFailures:       0,
+		}
 	}
 
 	// TODO: parametrize the threshold for consecutive failures.
 	if cc.Status.ConnectionProbe.ConsecutiveFailures > 5 {
-		setConnectionProbeConditionTrue(cc, "Connection probe is successful")
-	} else {
 		msg := fmt.Sprintf("Remote connection probe failed, consecutive failures: %d", cc.Status.ConnectionProbe.ConsecutiveFailures)
 		setConnectionProbeConditionFalse(cc, msg)
+	} else {
+		setConnectionProbeConditionTrue(cc)
 	}
 	return nil
 }
