@@ -286,11 +286,11 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
 	// 1) Ensure the auth token
 	// 2) Generate the connect-agent pod manifest
-	// 3) Set control plane endpoint
-	// 4) Set the connect-agent config to Cluster object
-	// 5) Wait until the Cluster object update is reconciled by Topology controller
-	// 6) Update kubeconfig secret
-	// 7) Monitor connection to the workload cluster
+	// 3) Initialize the connection probe state
+	// 4) Set control plane endpoint
+	// 5) Set the connect-agent config to Cluster object
+	// 6) Wait until the Cluster object update is reconciled by Topology controller
+	// 7) Update kubeconfig secret
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
