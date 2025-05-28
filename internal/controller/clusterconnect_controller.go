@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -246,7 +247,6 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
 			LastProbeTimestamp:        metav1.Time{},
 			LastProbeSuccessTimestamp: metav1.Time{},
-			ConsecutiveFailures:       0,
 		}
 	}
 
@@ -572,13 +572,15 @@ func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context,
 		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
 			LastProbeTimestamp:        metav1.Time{},
 			LastProbeSuccessTimestamp: metav1.Time{},
-			ConsecutiveFailures:       0,
 		}
 	}
 
-	// TODO: parametrize the threshold for consecutive failures.
-	if cc.Status.ConnectionProbe.ConsecutiveFailures > 5 {
-		msg := fmt.Sprintf("Remote connection probe failed, consecutive failures: %d", cc.Status.ConnectionProbe.ConsecutiveFailures)
+	timeDiff := cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Sub(cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time)
+	if timeDiff > (5 * time.Minute) {
+		msg := fmt.Sprintf("Remote connection probe failed. Time since last successful probe: %s. Last probe: %s, Last successful probe: %s",
+			timeDiff.String(),
+			cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Format(time.RFC3339),
+			cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time.Format(time.RFC3339))
 		setConnectionProbeConditionFalse(cc, msg)
 	} else {
 		setConnectionProbeConditionTrue(cc)

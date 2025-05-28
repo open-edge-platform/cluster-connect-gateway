@@ -255,10 +255,6 @@ spec:
                 description: ConnectionProbe defines the state of the connection with
                   connect-agent.
                 properties:
-                  consecutiveFailures:
-                    description: ConsecutiveFailures is the number of consecutive
-                      health probe failures.
-                    type: integer
                   lastProbeSuccessTimestamp:
                     description: LastProbeSuccessTimestamp is the time when the health
                       probe was successfully executed last.

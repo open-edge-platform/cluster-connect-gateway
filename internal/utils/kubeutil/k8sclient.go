@@ -228,17 +228,18 @@ func (m *kubeclient) UpdateConnectionProbe(tunnelId string, hasSession bool) err
 		return err
 	}
 
+	// Create a deep copy for patching
 	beforeObj := cc.DeepCopy()
 
-	cc.Status.ConnectionProbe.LastProbeTimestamp = metav1.Now()
+	now := metav1.Now()
+	cc.Status.ConnectionProbe.LastProbeTimestamp = now
+	log.Debugf("Probing connection for tunnel %s at %s", tunnelId, now)
 
 	if hasSession {
-		cc.Status.ConnectionProbe.LastProbeSuccessTimestamp = cc.Status.ConnectionProbe.LastProbeTimestamp
-		cc.Status.ConnectionProbe.ConsecutiveFailures = 0
+		cc.Status.ConnectionProbe.LastProbeSuccessTimestamp = now
 		log.Debug("Connection probe successful for tunnel", tunnelId)
 	} else {
-		cc.Status.ConnectionProbe.ConsecutiveFailures++
-		log.Debugf("Connection probe failed for tunnel %s, consecutive failures: %d", tunnelId, cc.Status.ConnectionProbe.ConsecutiveFailures)
+		log.Debugf("Connection probe failed for tunnel %s", tunnelId)
 	}
 
 	// modify clusterconnection with the health info

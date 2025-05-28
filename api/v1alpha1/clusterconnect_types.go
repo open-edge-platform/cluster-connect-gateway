@@ -102,9 +102,6 @@ type ConnectionProbeState struct {
 
 	// LastProbeSuccessTimestamp is the time when the health probe was successfully executed last.
 	LastProbeSuccessTimestamp metav1.Time `json:"lastProbeSuccessTimestamp,omitempty"`
-
-	// ConsecutiveFailures is the number of consecutive health probe failures.
-	ConsecutiveFailures int `json:"consecutiveFailures,omitempty"`
 }
 
 // +kubebuilder:object:root=true

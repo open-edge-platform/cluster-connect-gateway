@@ -74,8 +74,7 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 				err := k8sClient.Get(ctx, testClusterConnect, cc)
 				return err == nil &&
 					cc.Status.ConnectionProbe.LastProbeTimestamp == metav1.Time{} &&
-					cc.Status.ConnectionProbe.LastProbeSuccessTimestamp == metav1.Time{} &&
-					cc.Status.ConnectionProbe.ConsecutiveFailures == 0
+					cc.Status.ConnectionProbe.LastProbeSuccessTimestamp == metav1.Time{}
 			}, timeout, interval).Should(BeTrue())
 
 			// Ensure ControlPlaneEndpoint is set.
