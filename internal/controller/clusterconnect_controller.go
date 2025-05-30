@@ -83,7 +83,7 @@ var (
 )
 
 var (
-	clusterConnectConnectionProbeTimeout = time.Duration(time.Minute * 5)
+	clusterConnectConnectionProbeTimeout = 5 * time.Minute
 )
 
 type ConnectAgentConfig struct {
