@@ -186,7 +186,9 @@ controller:
   logLevel: 2
 
   # Additional command line flags to pass.
-  extraArgs: []
+  extraArgs: [
+    "--connection-probe-timeout=5m",
+  ]
 
   # Additional environment variables to pass.
   extraEnv: []

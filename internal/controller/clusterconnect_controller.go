@@ -82,6 +82,10 @@ var (
 	}
 )
 
+var (
+	clusterConnectConnectionProbeTimeout = time.Duration(time.Minute * 5)
+)
+
 type ConnectAgentConfig struct {
 	Path    string `json:"path"`
 	Owner   string `json:"owner"`
@@ -122,10 +126,12 @@ func clusterRefIdxFunc(o client.Object) []string {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, connectionTimeout time.Duration) error {
 	if r.Client == nil {
 		return errors.New("Client must not be nil")
 	}
+
+	clusterConnectConnectionProbeTimeout = connectionTimeout
 
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ClusterConnect{}).
@@ -576,7 +582,7 @@ func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context,
 	}
 
 	timeDiff := cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Sub(cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time)
-	if timeDiff > (5 * time.Minute) {
+	if timeDiff > clusterConnectConnectionProbeTimeout {
 		msg := fmt.Sprintf("Remote connection probe failed. Time since last successful probe: %s. Last probe: %s, Last successful probe: %s",
 			timeDiff.String(),
 			cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Format(time.RFC3339),
