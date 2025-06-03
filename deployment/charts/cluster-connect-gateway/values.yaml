@@ -115,6 +115,9 @@ gateway:
   # Additional environment variables to pass.
   extraEnv: []
 
+  # Interval for connection probe to downstream clusters
+  connectionProbeInterval: "1m"
+
 openpolicyagent:
   enabled: false
   port: 8181
