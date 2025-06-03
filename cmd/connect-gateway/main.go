@@ -93,6 +93,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	log.Infof("Starting edge connection gateway server on %s", listenAddr)
+	log.Infof("Connection probe interval set to %s", connectionProbeInterval)
 	go runServer(ctx, server, errChan)
 
 	// Wait for either an error or an OS signal
