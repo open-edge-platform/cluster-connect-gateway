@@ -186,9 +186,7 @@ controller:
   logLevel: 2
 
   # Additional command line flags to pass.
-  extraArgs: [
-    "--connection-probe-timeout=5m",
-  ]
+  extraArgs: []
 
   # Additional environment variables to pass.
   extraEnv: []
@@ -199,3 +197,6 @@ controller:
     enabled: true
     secretName: "tls-orch"
     secretNamespace : "orch-gateway"
+  
+  # Timeout for connection probe to downstream clusters
+  connectionProbeTimeout: "5m"
