@@ -588,6 +588,11 @@ func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context,
 		}
 	}
 
+	if cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.IsZero() {
+		// initConditions will keep ConnectionProbeCondition Unknown
+		return nil
+	}
+
 	timeDiff := cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Sub(cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time)
 	if timeDiff > clusterConnectConnectionProbeTimeout {
 		msg := fmt.Sprintf("Remote connection probe failed. Time since last successful probe: %s. Last probe: %s, Last successful probe: %s",
