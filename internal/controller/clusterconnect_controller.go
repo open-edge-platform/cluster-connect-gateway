@@ -145,6 +145,7 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	// Add KubeadmControlPlane when implemented.
 	r.providerManager = provider.NewProviderManager().
 		WithProvider("RKE2ControlPlane", "/var/lib/rancher/rke2/agent/pod-manifests/connect-agent.yaml").
+		WithProvider("KThreesControlPlane", "/var/lib/rancher/k3s/agent/pod-manifests/connect-agent.yaml").
 		Build()
 
 	// Get the hostname of the control plane endpoint from environment variable.
