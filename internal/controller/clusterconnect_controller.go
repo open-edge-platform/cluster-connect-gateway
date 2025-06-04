@@ -259,6 +259,13 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 	// Set status.ready to true if all the conditions are true.
 	status := true
 	for _, condition := range cc.Status.Conditions {
+		// skip the condition that is not a part of the provisioning.
+		// Status.Ready value should be based only on the conditions
+		// that are part of the provisioning.
+		if condition.Type == v1alpha1.ConnectionProbeCondition {
+			continue
+		}
+
 		if condition.Status != metav1.ConditionTrue {
 			status = false
 			break
