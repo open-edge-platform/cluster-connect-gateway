@@ -77,6 +77,7 @@ spec:
             - "--log-level={{ .Values.gateway.logLevel }}"
             - "--external-host={{ .Values.gateway.ingress.hostname }}"
             - "--tunnel-auth-mode={{ .Values.security.agent.authMode }}"
+            - "--connection-probe-interval={{ .Values.gateway.connectionProbeInterval }}"
             {{- with .Values.gateway.extraArgs }}
             {{- range . }}
             - {{ . | quote }}

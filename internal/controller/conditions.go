@@ -17,6 +17,7 @@ var requiredConditionTypes = []string{
 	v1alpha1.ControlPlaneEndpointSetCondition,
 	v1alpha1.ClusterSpecUpdatedCondition,
 	v1alpha1.TopologyReconciledCondition,
+	v1alpha1.ConnectionProbeCondition,
 }
 
 // initConditions initializes conditions with Unknown if conditions are not set.
@@ -167,6 +168,31 @@ func setKubeconfigReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...str
 		Type:    v1alpha1.KubeconfigReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  v1alpha1.ReadyReason,
+		Message: conditionMessage,
+	})
+}
+
+func setConnectionProbeConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
+	conditionMessage := ""
+	if len(message) > 0 {
+		conditionMessage = message[0]
+	}
+	v1beta2conditions.Set(cc, metav1.Condition{
+		Type:    v1alpha1.ConnectionProbeCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  v1alpha1.ConnectionProbeSucceededReason,
+		Message: conditionMessage,
+	})
+}
+func setConnectionProbeConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) {
+	conditionMessage := ""
+	if len(message) > 0 {
+		conditionMessage = message[0]
+	}
+	v1beta2conditions.Set(cc, metav1.Condition{
+		Type:    v1alpha1.ConnectionProbeCondition,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ConnectionProbeFailedReason,
 		Message: conditionMessage,
 	})
 }
