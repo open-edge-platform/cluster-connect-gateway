@@ -29,6 +29,7 @@ func main() {
 	var gatewayAddress, logLevel, opaAddress, oidcIssuerURL, externalHost, tunnelAuthMode string
 	var gatewayPort, opaPort int
 	var enableAuth, enableMetrics, oidcInsecureSkipVerify bool
+	var connectionProbeInterval time.Duration
 	flag.StringVar(&gatewayAddress, "address", "0.0.0.0", "Address to listen on for edge connection gateway")
 	flag.IntVar(&gatewayPort, "port", 8080, "Port to listen on for edge connection gateway")
 	flag.BoolVar(&enableAuth, "enable-auth", false, "Enable OIDC authentication")
@@ -41,6 +42,7 @@ func main() {
 	flag.StringVar(&opaAddress, "opa-address", "http://localhost", "Address to opa")
 	flag.IntVar(&opaPort, "opa-port", 8181, "Port to opa")
 	flag.StringVar(&tunnelAuthMode, "tunnel-auth-mode", "token", "Specify the authentication mode for tunnel connections: 'token' or 'jwt'")
+	flag.DurationVar(&connectionProbeInterval, "connection-probe-interval", 1*time.Minute, "Interval for connection probe checks")
 	flag.Parse()
 
 	setLogLevel(logLevel)
@@ -65,6 +67,9 @@ func main() {
 	clientCleanupTicker := time.NewTicker(480 * time.Minute)
 	defer clientCleanupTicker.Stop()
 
+	connectionProbeTicker := time.NewTicker(connectionProbeInterval)
+	defer connectionProbeTicker.Stop()
+
 	server, err := server.NewServer(
 		server.WithListenAddr(listenAddr),
 		server.WithAuth(enableAuth, opaAddress, opaPort),
@@ -73,6 +78,7 @@ func main() {
 		server.WithOIDCIssuerURL(oidcIssuerURL),
 		server.WithOIDCInsecureSkipVerify(oidcInsecureSkipVerify),
 		server.WithCleanupTicker(clientCleanupTicker),
+		server.WithConnectionProbeTicker(connectionProbeTicker),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create gateway server: %v", err)
@@ -87,6 +93,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	log.Infof("Starting edge connection gateway server on %s", listenAddr)
+	log.Infof("Connection probe interval set to %s", connectionProbeInterval)
 	go runServer(ctx, server, errChan)
 
 	// Wait for either an error or an OS signal
