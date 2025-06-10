@@ -248,8 +248,10 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 	_ = log.FromContext(ctx)
 
 	// Check if conditions are initialized, if not, initialize them with Unknown.
-	if len(cc.Status.Conditions) == 0 {
-		initConditions(cc)
+	initConditions(cc)
+
+	// if ConnectionProbeState is not set, initialize it.
+	if cc.Status.ConnectionProbe == (v1alpha1.ConnectionProbeState{}) {
 		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
 			LastProbeTimestamp:        metav1.Time{},
 			LastProbeSuccessTimestamp: metav1.Time{},
