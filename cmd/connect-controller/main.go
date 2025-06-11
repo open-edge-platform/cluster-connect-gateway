@@ -96,6 +96,26 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Log configuration
+	setupLog.Info("starting connect-controller",
+		"metricsAddr", metricsAddr,
+		"probeAddr", probeAddr,
+		"enableLeaderElection", enableLeaderElection,
+		"secureMetrics", secureMetrics,
+		"webhookCertPath", webhookCertPath,
+		"webhookCertName", webhookCertName,
+		"webhookCertKey", webhookCertKey,
+		"metricsCertPath", metricsCertPath,
+		"metricsCertName", metricsCertName,
+		"metricsCertKey", metricsCertKey,
+		"enableHTTP2", enableHTTP2,
+		"connectionProbeTimeout", connectionProbeTimeout,
+		"profilerAddress", profilerAddress,
+		"enableContentionProfiling", enableContentionProfiling,
+		"concurrency", concurrency,
+		"kubeApiQPS", kubeApiQPS,
+		"kubeApiBurst", kubeApiBurst)
+
 	if enableContentionProfiling {
 		goruntime.SetBlockProfileRate(1)
 	}
