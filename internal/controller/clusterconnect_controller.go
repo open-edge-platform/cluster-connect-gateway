@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -82,10 +81,6 @@ var (
 	}
 )
 
-var (
-	clusterConnectConnectionProbeTimeout = 5 * time.Minute
-)
-
 type ConnectAgentConfig struct {
 	Path    string `json:"path"`
 	Owner   string `json:"owner"`
@@ -126,12 +121,10 @@ func clusterRefIdxFunc(o client.Object) []string {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, connectionTimeout time.Duration) error {
+func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	if r.Client == nil {
 		return errors.New("Client must not be nil")
 	}
-
-	clusterConnectConnectionProbeTimeout = connectionTimeout
 
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ClusterConnect{}).
@@ -250,22 +243,11 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 	// Check if conditions are initialized, if not, initialize them with Unknown.
 	if len(cc.Status.Conditions) == 0 {
 		initConditions(cc)
-		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
-			LastProbeTimestamp:        metav1.Time{},
-			LastProbeSuccessTimestamp: metav1.Time{},
-		}
 	}
 
 	// Set status.ready to true if all the conditions are true.
 	status := true
 	for _, condition := range cc.Status.Conditions {
-		// skip the condition that is not a part of the provisioning.
-		// Status.Ready value should be based only on the conditions
-		// that are part of the provisioning.
-		if condition.Type == v1alpha1.ConnectionProbeCondition {
-			continue
-		}
-
 		if condition.Status != metav1.ConditionTrue {
 			status = false
 			break
@@ -299,15 +281,13 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
 	// 1) Ensure the auth token
 	// 2) Generate the connect-agent pod manifest
-	// 3) Initialize the connection probe state
-	// 4) Set control plane endpoint
-	// 5) Set the connect-agent config to Cluster object
-	// 6) Wait until the Cluster object update is reconciled by Topology controller
-	// 7) Update kubeconfig secret
+	// 3) Set control plane endpoint
+	// 4) Set the connect-agent config to Cluster object
+	// 5) Wait until the Cluster object update is reconciled by Topology controller
+	// 6) Update kubeconfig secret
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
-		r.reconcileConnectionProbe,
 		r.reconcileControlPlaneEndpoint,
 		r.reconcileClusterSpec,
 		r.reconcileTopology,
@@ -575,34 +555,6 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 	}
 
 	setKubeconfigReadyConditionTrue(cc)
-	return nil
-}
-
-func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
-	log.FromContext(ctx)
-	// Initialize ConnectionProbe if not already set.
-	if cc.Status.ConnectionProbe == (v1alpha1.ConnectionProbeState{}) {
-		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
-			LastProbeTimestamp:        metav1.Time{},
-			LastProbeSuccessTimestamp: metav1.Time{},
-		}
-	}
-
-	if cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.IsZero() {
-		// initConditions will keep ConnectionProbeCondition Unknown
-		return nil
-	}
-
-	timeDiff := cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Sub(cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time)
-	if timeDiff > clusterConnectConnectionProbeTimeout {
-		msg := fmt.Sprintf("Remote connection probe failed. Time since last successful probe: %s. Last probe: %s, Last successful probe: %s",
-			timeDiff.String(),
-			cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Format(time.RFC3339),
-			cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time.Format(time.RFC3339))
-		setConnectionProbeConditionFalse(cc, msg)
-	} else {
-		setConnectionProbeConditionTrue(cc)
-	}
 	return nil
 }
 

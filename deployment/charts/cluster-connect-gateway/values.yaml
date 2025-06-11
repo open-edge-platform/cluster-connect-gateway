@@ -115,9 +115,6 @@ gateway:
   # Additional environment variables to pass.
   extraEnv: []
 
-  # Interval for connection probe to downstream clusters
-  connectionProbeInterval: "1m"
-
 openpolicyagent:
   enabled: false
   port: 8181
@@ -200,6 +197,3 @@ controller:
     enabled: true
     secretName: "tls-orch"
     secretNamespace : "orch-gateway"
-  
-  # Timeout for connection probe to downstream clusters
-  connectionProbeTimeout: "5m"

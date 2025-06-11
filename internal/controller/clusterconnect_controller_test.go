@@ -69,14 +69,6 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 				return err == nil && cc.Status.AgentManifest != ""
 			}, timeout, interval).Should(BeTrue())
 
-			// Ensure status.connectionProbe is set.
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, testClusterConnect, cc)
-				return err == nil &&
-					cc.Status.ConnectionProbe.LastProbeTimestamp == metav1.Time{} &&
-					cc.Status.ConnectionProbe.LastProbeSuccessTimestamp == metav1.Time{}
-			}, timeout, interval).Should(BeTrue())
-
 			// Ensure ControlPlaneEndpoint is set.
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, testClusterConnect, cc)
@@ -86,7 +78,6 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 			}, timeout, interval).Should(BeTrue())
 
 			// Ensure there are three conditions and status.ready is true.
-			// Conditions with status Unknown wouldn't be listed in Status.Conditions.
 			Expect(cc.Status.Conditions).To(HaveLen(3))
 			Expect(cc.Status.Ready).To(BeTrue())
 		})

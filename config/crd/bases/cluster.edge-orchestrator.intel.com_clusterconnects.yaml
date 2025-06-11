@@ -251,21 +251,6 @@ spec:
                   - type
                   type: object
                 type: array
-              connectionProbe:
-                description: ConnectionProbe defines the state of the connection with
-                  connect-agent.
-                properties:
-                  lastProbeSuccessTimestamp:
-                    description: LastProbeSuccessTimestamp is the time when the health
-                      probe was successfully executed last.
-                    format: date-time
-                    type: string
-                  lastProbeTimestamp:
-                    description: LastProbeTimestamp is the time when the health probe
-                      was executed last.
-                    format: date-time
-                    type: string
-                type: object
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint provides the URL for accessing the
                   kubeapi-server through the connection gateway.

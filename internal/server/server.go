@@ -42,7 +42,6 @@ type Server struct {
 	opaAddress             string
 	opaPort                int
 	cleanupTicker          *time.Ticker
-	connectionProbeTicker  *time.Ticker
 }
 
 type ServerOptions func(*Server)
@@ -112,12 +111,6 @@ func WithCleanupTicker(ticker *time.Ticker) ServerOptions {
 	}
 }
 
-func WithConnectionProbeTicker(ticker *time.Ticker) ServerOptions {
-	return func(s *Server) {
-		s.connectionProbeTicker = ticker
-	}
-}
-
 func WithOIDCInsecureSkipVerify(insecureSkipVerify bool) ServerOptions {
 	return func(s *Server) {
 		s.oidcInsecureSkipVerify = insecureSkipVerify
@@ -158,15 +151,6 @@ func (s *Server) Run() error {
 			log.Debug("starting routine to clean-up unused http clients")
 			for range s.cleanupTicker.C {
 				s.cleanupUnusedHttpClients()
-			}
-		}()
-	}
-
-	if s.connectionProbeTicker != nil {
-		go func() {
-			log.Debug("starting routine to check connection of http clients")
-			for range s.connectionProbeTicker.C {
-				s.checkHttpClientsConnection()
 			}
 		}()
 	}
