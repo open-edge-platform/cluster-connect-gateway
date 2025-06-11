@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: (C) 2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package main // nolint:cyclop
 
 import (
 	"crypto/tls"
