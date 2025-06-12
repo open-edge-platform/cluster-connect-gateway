@@ -22,7 +22,7 @@ var requiredConditionTypes = []string{
 
 // initConditions initializes conditions with Unknown if conditions are not set.
 func initConditions(cc *v1alpha1.ClusterConnect) {
-	if len(cc.GetConditions()) == 0 {
+	if len(cc.GetConditions()) < len(requiredConditionTypes) {
 		for _, condition := range requiredConditionTypes {
 			// Skip ClusterSpecUpdatedCondition and TopologyReconciledCondition if ClusterRef is not set.
 			if cc.Spec.ClusterRef == nil {
@@ -30,6 +30,11 @@ func initConditions(cc *v1alpha1.ClusterConnect) {
 					condition == v1alpha1.TopologyReconciledCondition {
 					continue
 				}
+			}
+
+			if v1beta2conditions.Has(cc, condition) {
+				// If the condition is already set, skip it.
+				continue
 			}
 
 			// Set condition to Unknown otherwise.

@@ -85,9 +85,8 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 					cc.Status.ControlPlaneEndpoint.Port == 8080
 			}, timeout, interval).Should(BeTrue())
 
-			// Ensure there are three conditions and status.ready is true.
-			// Conditions with status Unknown wouldn't be listed in Status.Conditions.
-			Expect(cc.Status.Conditions).To(HaveLen(3))
+			// Ensure there are four conditions and status.ready is true.
+			Expect(cc.Status.Conditions).To(HaveLen(4))
 			Expect(cc.Status.Ready).To(BeTrue())
 		})
 	})

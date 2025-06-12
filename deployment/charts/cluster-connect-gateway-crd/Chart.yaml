@@ -6,8 +6,8 @@ apiVersion: v2
 name: cluster-connect-gateway-crd
 description: A Helm chart for Cluster Connect Gateway CRDs
 type: application
-version: 1.2.1-dev-038768c4
+version: 1.2.1
 annotations:
-  revision: 038768c4aa2152d3bce5e099b1dbafde192fbec4
-  created: "2025-06-11T11:56:04Z"
-appVersion: 1.2.1-dev-038768c4
+  revision: dffd378fd9489c404db0496747ccf47bcaf58c33
+  created: "2025-06-10T15:27:56Z"
+appVersion: 1.2.1
