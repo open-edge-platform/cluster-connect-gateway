@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	cutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -126,7 +127,7 @@ func clusterRefIdxFunc(o client.Object) []string {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, connectionTimeout time.Duration) error {
+func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, connectionTimeout time.Duration, concurrency int) error {
 	if r.Client == nil {
 		return errors.New("Client must not be nil")
 	}
@@ -136,6 +137,7 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ClusterConnect{}).
 		Named("cluster/clusterconnect").
+		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Build(r)
 
 	if err != nil {

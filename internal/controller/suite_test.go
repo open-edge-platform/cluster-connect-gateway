@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	err = (&ClusterConnectReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(ctx, k8sManager, 1*time.Second)
+	}).SetupWithManager(ctx, k8sManager, 1*time.Second, 1)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
