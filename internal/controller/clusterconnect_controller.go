@@ -418,6 +418,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	// Validate Cluster topology.
 	if cluster.Spec.Topology == nil {
 		setClusterSpecUpdatedConditionFalse(cc)
+		log.Info("Cluster topology is not defined, skipping connect-agent manifest update", "Cluster", clusterKey)
 		return fmt.Errorf("Cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
 	}
 
@@ -431,6 +432,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	agentConfigJson, err := json.Marshal(agentConfig)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
+		log.Error(err, "Failed to marshal agent config for Cluster", "Cluster", clusterKey)
 		return fmt.Errorf("failed to marshal agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
@@ -440,9 +442,11 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		if variable.Name == "connectAgentManifest" {
 			var existingConfig ConnectAgentConfig
 			if err := json.Unmarshal(variable.Value.Raw, &existingConfig); err != nil {
+				log.Error(err, "Failed to unmarshal existing agent config for Cluster", "Cluster", clusterKey)
 				setClusterSpecUpdatedConditionFalse(cc)
 				return fmt.Errorf("failed to unmarshal existing agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 			}
+			log.Info("Found existing connectAgentManifest variable in Cluster topology", "Cluster", clusterKey, "existingConfig", existingConfig)
 
 			// Update the variable if it doesn't match the desired configuration.
 			if existingConfig.Path != agentConfig.Path || existingConfig.Content != agentConfig.Content || existingConfig.Owner != agentConfig.Owner {
@@ -470,12 +474,14 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	patchHelper, err := patch.NewHelper(cluster, r.Client)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
+		log.Error(err, "Failed to create patch helper for Cluster", "Cluster", clusterKey)
 		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 	if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
+		log.Error(err, "Failed to patch Cluster object", "Cluster", clusterKey)
 		return fmt.Errorf("failed to patch Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
