@@ -439,6 +439,14 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		return fmt.Errorf("failed to marshal agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
+	// Patch the Cluster object.
+	patchHelper, err := patch.NewHelper(cluster, r.Client)
+	if err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		log.Error(err, "Failed to create patch helper for Cluster", "Cluster", clusterKey)
+		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
+	}
+
 	// Check and update the `connectAgentManifest` variable.
 	variableUpdated := false
 	for i, variable := range cluster.Spec.Topology.Variables {
@@ -471,14 +479,6 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 			Value: v1.JSON{Raw: agentConfigJson},
 		})
 		log.Info("Added connectAgentManifest variable to Cluster topology", "Cluster", clusterKey)
-	}
-
-	// Patch the Cluster object.
-	patchHelper, err := patch.NewHelper(cluster, r.Client)
-	if err != nil {
-		setClusterSpecUpdatedConditionFalse(cc)
-		log.Error(err, "Failed to create patch helper for Cluster", "Cluster", clusterKey)
-		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
