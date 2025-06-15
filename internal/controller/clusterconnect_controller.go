@@ -397,23 +397,31 @@ func (r *ClusterConnectReconciler) reconcileControlPlaneEndpoint(ctx context.Con
 
 func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
 	log := log.FromContext(ctx)
-	// Return early, if the ClusterConnect doesn't have associated Cluster-API resources.
+
+	// Return early if ClusterRef is not set in the ClusterConnect object.
 	if cc.Spec.ClusterRef == nil {
 		return nil
 	}
 
 	cluster := &clusterv1.Cluster{}
-	err := r.Client.Get(ctx, client.ObjectKey{
+	clusterKey := client.ObjectKey{
 		Namespace: cc.Spec.ClusterRef.Namespace,
 		Name:      cc.Spec.ClusterRef.Name,
-	}, cluster)
-
-	if err != nil {
-		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to get Cluster object: %v", err)
 	}
 
-	// Now update the Cluster object with the agent config.
+	// Fetch the Cluster object.
+	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to get Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
+	}
+
+	// Validate Cluster topology.
+	if cluster.Spec.Topology == nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("Cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
+	}
+
+	// Prepare the agent configuration.
 	agentConfig := &ConnectAgentConfig{
 		Path:    r.providerManager.StaticPodManifestPath(cluster.Spec.ControlPlaneRef.Kind),
 		Owner:   "root:root",
@@ -423,35 +431,55 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	agentConfigJson, err := json.Marshal(agentConfig)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to marshal agent config: %v", err)
+		return fmt.Errorf("failed to marshal agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	// Inject the pod manifest.
+	// Check and update the `connectAgentManifest` variable.
+	variableUpdated := false
+	for i, variable := range cluster.Spec.Topology.Variables {
+		if variable.Name == "connectAgentManifest" {
+			var existingConfig ConnectAgentConfig
+			if err := json.Unmarshal(variable.Value.Raw, &existingConfig); err != nil {
+				setClusterSpecUpdatedConditionFalse(cc)
+				return fmt.Errorf("failed to unmarshal existing agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
+			}
+
+			// Update the variable if it doesn't match the desired configuration.
+			if existingConfig.Path != agentConfig.Path || existingConfig.Content != agentConfig.Content || existingConfig.Owner != agentConfig.Owner {
+				cluster.Spec.Topology.Variables[i].Value = v1.JSON{Raw: agentConfigJson}
+				variableUpdated = true
+				log.Info("Updated connectAgentManifest variable in Cluster topology", "Cluster", clusterKey)
+			} else {
+				setClusterSpecReayConditionTrue(cc)
+				log.Info("connectAgentManifest variable is already up-to-date", "Cluster", clusterKey)
+				return nil
+			}
+		}
+	}
+
+	// Add the variable if it doesn't exist.
+	if !variableUpdated {
+		cluster.Spec.Topology.Variables = append(cluster.Spec.Topology.Variables, clusterv1.ClusterVariable{
+			Name:  "connectAgentManifest",
+			Value: v1.JSON{Raw: agentConfigJson},
+		})
+		log.Info("Added connectAgentManifest variable to Cluster topology", "Cluster", clusterKey)
+	}
+
+	// Patch the Cluster object.
 	patchHelper, err := patch.NewHelper(cluster, r.Client)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to create patch helper for Cluster: %v", err)
+		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	clusterVariable := []clusterv1.ClusterVariable{
-		{
-			Name: "connectAgentManifest",
-			Value: v1.JSON{
-				Raw: agentConfigJson,
-			},
-		},
-	}
-	log.Info("Adding connectAgentManifest variable to Cluster topology", "variable", clusterVariable)
-	log.Info("Cluster topology variables before update", "variables", cluster.Spec.Topology.Variables)
-	cluster.Spec.Topology.Variables = append(cluster.Spec.Topology.Variables, clusterVariable...)
-	log.Info("Cluster topology variables after update", "variables", cluster.Spec.Topology.Variables)
-
-	// Patch the updates after each reconciliation.
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 	if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
-		setClusterSpecUpdatedConditionFalse(cc, "failed to patch Cluster")
-		return fmt.Errorf("failed to patch Cluster object: %v", err)
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to patch Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
+
+	log.Info("[TODO: Remove log] Cluster topology updated with connectAgentManifest variable", "variable", cluster.Spec.Topology.Variables)
 
 	setClusterSpecReayConditionTrue(cc)
 	return nil
