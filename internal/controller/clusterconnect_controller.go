@@ -193,9 +193,7 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.4/pkg/reconcile
 func (r *ClusterConnectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (retres ctrl.Result, reterr error) {
-	log := log.FromContext(ctx)
-
-	log.Info("Reconciling ClusterConnect")
+	_ = log.FromContext(ctx)
 
 	cc := &v1alpha1.ClusterConnect{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cc); err != nil {
@@ -299,8 +297,7 @@ func (r *ClusterConnectReconciler) delete(ctx context.Context, cc *v1alpha1.Clus
 
 //nolint:unparam
 func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.ClusterConnect) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-	log.Info("Reconciling ClusterConnect", "ClusterConnect", cc.Name)
+	_ = log.FromContext(ctx)
 
 	// Normal reconcile logic consists of three phases, each dependent on the previous phase.
 	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
@@ -399,7 +396,7 @@ func (r *ClusterConnectReconciler) reconcileControlPlaneEndpoint(ctx context.Con
 }
 
 func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
-	log := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
 	// Return early if ClusterRef is not set in the ClusterConnect object.
 	if cc.Spec.ClusterRef == nil {
@@ -421,8 +418,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	// Validate Cluster topology.
 	if cluster.Spec.Topology == nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Info("Cluster topology is not defined, skipping connect-agent manifest update", "Cluster", clusterKey)
-		return fmt.Errorf("Cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
+		return fmt.Errorf("cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
 	}
 
 	// Prepare the agent configuration.
@@ -435,7 +431,6 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	agentConfigJson, err := json.Marshal(agentConfig)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Error(err, "Failed to marshal agent config for Cluster", "Cluster", clusterKey)
 		return fmt.Errorf("failed to marshal agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
@@ -443,7 +438,6 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	patchHelper, err := patch.NewHelper(cluster, r.Client)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Error(err, "Failed to create patch helper for Cluster", "Cluster", clusterKey)
 		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
@@ -453,20 +447,16 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		if variable.Name == "connectAgentManifest" {
 			var existingConfig ConnectAgentConfig
 			if err := json.Unmarshal(variable.Value.Raw, &existingConfig); err != nil {
-				log.Error(err, "Failed to unmarshal existing agent config for Cluster", "Cluster", clusterKey)
 				setClusterSpecUpdatedConditionFalse(cc)
 				return fmt.Errorf("failed to unmarshal existing agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 			}
-			log.Info("Found existing connectAgentManifest variable in Cluster topology", "Cluster", clusterKey, "existingConfig", existingConfig)
 
 			// Update the variable if it doesn't match the desired configuration.
 			if existingConfig.Path != agentConfig.Path || existingConfig.Content != agentConfig.Content || existingConfig.Owner != agentConfig.Owner {
 				cluster.Spec.Topology.Variables[i].Value = v1.JSON{Raw: agentConfigJson}
 				variableUpdated = true
-				log.Info("Updated connectAgentManifest variable in Cluster topology", "Cluster", clusterKey)
 			} else {
 				setClusterSpecReayConditionTrue(cc)
-				log.Info("connectAgentManifest variable is already up-to-date", "Cluster", clusterKey)
 				return nil
 			}
 		}
@@ -478,17 +468,13 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 			Name:  "connectAgentManifest",
 			Value: v1.JSON{Raw: agentConfigJson},
 		})
-		log.Info("Added connectAgentManifest variable to Cluster topology", "Cluster", clusterKey)
 	}
 
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 	if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Error(err, "Failed to patch Cluster object", "Cluster", clusterKey)
 		return fmt.Errorf("failed to patch Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
-
-	log.Info("[TODO: Remove log] Cluster topology updated with connectAgentManifest variable", "variable", cluster.Spec.Topology.Variables)
 
 	setClusterSpecReayConditionTrue(cc)
 	return nil
@@ -496,8 +482,6 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 
 func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
 	log := log.FromContext(ctx)
-
-	log.Info("Reconciling ClusterConnect topology", "ClusterConnect", cc.Name)
 
 	// Return early, if the ClusterConnect spec doesn't have cluster-api ClusterRef.
 	if cc.Spec.ClusterRef == nil {
@@ -525,14 +509,12 @@ func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1
 			break
 		}
 	}
-	log.Info("Checking if connectAgentManifest variable exists in Cluster topology", "Cluster", cluster.Name, "exists", exists, "observedGeneration", cluster.Status.ObservedGeneration, "generation", cluster.Generation, "spec", cluster.Spec.Topology)
 
 	// If the Generation does not match to the observedGeneration, this means the Cluster spec update in reconcileClusterSpec
 	// is not yet reconciled by the Topology controller.
 	// Set tracker to watch the Cluster object updates and return.
 	if !exists || cluster.Generation != cluster.Status.ObservedGeneration {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Info("Cluster topology is not reconciled yet, setting up watch", "Cluster", cluster.Name)
 		if err := r.externalTracker.Watch(log, cluster, handler.EnqueueRequestsFromMapFunc(r.clusterToClusterConnectMapper),
 			clusterPredicate); err != nil {
 			return fmt.Errorf("failed to add watch on ClusterRef: %v", err)
