@@ -193,7 +193,9 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.4/pkg/reconcile
 func (r *ClusterConnectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (retres ctrl.Result, reterr error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
+
+	log.Info("Reconciling ClusterConnect")
 
 	cc := &v1alpha1.ClusterConnect{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cc); err != nil {
@@ -297,7 +299,8 @@ func (r *ClusterConnectReconciler) delete(ctx context.Context, cc *v1alpha1.Clus
 
 //nolint:unparam
 func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.ClusterConnect) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
+	log.Info("Reconciling ClusterConnect", "ClusterConnect", cc.Name)
 
 	// Normal reconcile logic consists of three phases, each dependent on the previous phase.
 	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
@@ -494,6 +497,8 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
 	log := log.FromContext(ctx)
 
+	log.Info("Reconciling ClusterConnect topology", "ClusterConnect", cc.Name)
+
 	// Return early, if the ClusterConnect spec doesn't have cluster-api ClusterRef.
 	if cc.Spec.ClusterRef == nil {
 		return nil
@@ -520,12 +525,14 @@ func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1
 			break
 		}
 	}
+	log.Info("Checking if connectAgentManifest variable exists in Cluster topology", "Cluster", cluster.Name, "exists", exists, "observedGeneration", cluster.Status.ObservedGeneration, "generation", cluster.Generation, "spec", cluster.Spec.Topology)
 
 	// If the Generation does not match to the observedGeneration, this means the Cluster spec update in reconcileClusterSpec
 	// is not yet reconciled by the Topology controller.
 	// Set tracker to watch the Cluster object updates and return.
 	if !exists || cluster.Generation != cluster.Status.ObservedGeneration {
 		setClusterSpecUpdatedConditionFalse(cc)
+		log.Info("Cluster topology is not reconciled yet, setting up watch", "Cluster", cluster.Name)q
 		if err := r.externalTracker.Watch(log, cluster, handler.EnqueueRequestsFromMapFunc(r.clusterToClusterConnectMapper),
 			clusterPredicate); err != nil {
 			return fmt.Errorf("failed to add watch on ClusterRef: %v", err)
