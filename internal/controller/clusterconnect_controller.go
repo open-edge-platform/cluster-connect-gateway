@@ -396,6 +396,7 @@ func (r *ClusterConnectReconciler) reconcileControlPlaneEndpoint(ctx context.Con
 }
 
 func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
+	log := log.FromContext(ctx)
 	// Return early, if the ClusterConnect doesn't have associated Cluster-API resources.
 	if cc.Spec.ClusterRef == nil {
 		return nil
@@ -432,7 +433,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		return fmt.Errorf("failed to create patch helper for Cluster: %v", err)
 	}
 
-	cluster.Spec.Topology.Variables = []clusterv1.ClusterVariable{
+	clusterVariable := []clusterv1.ClusterVariable{
 		{
 			Name: "connectAgentManifest",
 			Value: v1.JSON{
@@ -440,6 +441,10 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 			},
 		},
 	}
+	log.Info("Adding connectAgentManifest variable to Cluster topology", "variable", clusterVariable)
+	log.Info("Cluster topology variables before update", "variables", cluster.Spec.Topology.Variables)
+	cluster.Spec.Topology.Variables = append(cluster.Spec.Topology.Variables, clusterVariable...)
+	log.Info("Cluster topology variables after update", "variables", cluster.Spec.Topology.Variables)
 
 	// Patch the updates after each reconciliation.
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
