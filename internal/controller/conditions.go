@@ -112,7 +112,7 @@ func setControlPlaneEndpointSetConditionTrue(cc *v1alpha1.ClusterConnect, messag
 	})
 }
 
-func setClusterSpecReayConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
+func setClusterSpecReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
 	conditionMessage := ""
 	if len(message) > 0 {
 		conditionMessage = message[0]
@@ -125,7 +125,7 @@ func setClusterSpecReayConditionTrue(cc *v1alpha1.ClusterConnect, message ...str
 	})
 }
 
-func setClusterSpecUpdatedConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) {
+func setClusterSpecUpdatedConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) { //nolint:unparam
 	conditionMessage := ""
 	if len(message) > 0 {
 		conditionMessage = message[0]

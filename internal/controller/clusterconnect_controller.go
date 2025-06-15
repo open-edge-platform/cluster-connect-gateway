@@ -456,7 +456,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 				cluster.Spec.Topology.Variables[i].Value = v1.JSON{Raw: agentConfigJson}
 				variableUpdated = true
 			} else {
-				setClusterSpecReayConditionTrue(cc)
+				setClusterSpecReadyConditionTrue(cc)
 				return nil
 			}
 		}
@@ -476,7 +476,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		return fmt.Errorf("failed to patch Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	setClusterSpecReayConditionTrue(cc)
+	setClusterSpecReadyConditionTrue(cc)
 	return nil
 }
 
