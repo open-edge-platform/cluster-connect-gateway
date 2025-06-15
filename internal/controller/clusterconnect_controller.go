@@ -532,7 +532,7 @@ func (r *ClusterConnectReconciler) reconcileTopology(ctx context.Context, cc *v1
 	// Set tracker to watch the Cluster object updates and return.
 	if !exists || cluster.Generation != cluster.Status.ObservedGeneration {
 		setClusterSpecUpdatedConditionFalse(cc)
-		log.Info("Cluster topology is not reconciled yet, setting up watch", "Cluster", cluster.Name)q
+		log.Info("Cluster topology is not reconciled yet, setting up watch", "Cluster", cluster.Name)
 		if err := r.externalTracker.Watch(log, cluster, handler.EnqueueRequestsFromMapFunc(r.clusterToClusterConnectMapper),
 			clusterPredicate); err != nil {
 			return fmt.Errorf("failed to add watch on ClusterRef: %v", err)
