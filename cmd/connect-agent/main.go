@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	var gatewayUrl, tunnelId, logLevel, tokenPath, authToken, tunnelAuthMode string
+	var gatewayUrl, tunnelId, logLevel, tokenPath, authToken, tunnelAuthMode, staticPodPath string
 	var insecureSkipVerify bool
 	flag.StringVar(&gatewayUrl, "gateway-url", "", "The URL of the gateway")
 	// TODO: set this to false by default once CA mount is implemented
@@ -27,6 +27,7 @@ func main() {
 	flag.StringVar(&authToken, "auth-token", "", "The authentication token")
 	flag.StringVar(&logLevel, "log-level", "info", "Log levels: info, debug, trace")
 	flag.StringVar(&tokenPath, "token-path", "./access_token", "path to jwt token")
+	flag.StringVar(&staticPodPath, "static-pod-path", "/var/lib/kubelet/static-pods/connect-agent.yaml", "path to static pod manifests")
 	flag.Parse()
 
 	// Set log level for the tunnel data
@@ -64,6 +65,7 @@ func main() {
 		TokenPath:          tokenPath,
 		TunnelAuthMode:     tunnelAuthMode,
 		AuthToken:          authToken,
+		StaticPodPath:      staticPodPath,
 	}
 
 	agent.Run(ctx)

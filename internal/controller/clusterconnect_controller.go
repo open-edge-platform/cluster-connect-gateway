@@ -35,7 +35,6 @@ import (
 	v1alpha1 "github.com/open-edge-platform/cluster-connect-gateway/api/v1alpha1"
 	"github.com/open-edge-platform/cluster-connect-gateway/internal/agentconfig"
 	"github.com/open-edge-platform/cluster-connect-gateway/internal/auth"
-	"github.com/open-edge-platform/cluster-connect-gateway/internal/provider"
 	"github.com/open-edge-platform/cluster-connect-gateway/internal/utils/kubeutil"
 )
 
@@ -108,14 +107,14 @@ type ClusterConnectReconciler struct {
 	// TODO: Add pointer to connect-gateway client to request disconnect when
 	// ClusterConnect object is removed
 	// gatewayClient *gateway.Client
-	tokenManager    auth.TokenManager
-	providerManager provider.ProviderManager
+	tokenManager auth.TokenManager
 
 	controlPlaneEndpointHost string
 	controlPlaneEndpointPort int32
 
-	externalTracker external.ObjectTracker
-	recorder        record.EventRecorder
+	externalTracker       external.ObjectTracker
+	recorder              record.EventRecorder
+	StaticPodManifestPath string
 }
 
 func clusterRefIdxFunc(o client.Object) []string {
@@ -149,13 +148,6 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	if r.tokenManager, err = auth.NewTokenManager(); err != nil {
 		return errors.Wrap(err, "failed to initialize token manager")
 	}
-
-	// Initialize provider manager with RKE2ControlPlane provider.
-	// Add KubeadmControlPlane when implemented.
-	r.providerManager = provider.NewProviderManager().
-		WithProvider("RKE2ControlPlane", "/var/lib/rancher/rke2/agent/pod-manifests/connect-agent.yaml").
-		WithProvider("KThreesControlPlane", "/var/lib/rancher/k3s/agent/pod-manifests/connect-agent.yaml").
-		Build()
 
 	// Get the hostname of the control plane endpoint from environment variable.
 	parsedURL, err := url.Parse(os.Getenv("GATEWAY_INTERNAL_URL"))
@@ -414,7 +406,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 
 	// Now update the Cluster object with the agent config.
 	agentConfig := &ConnectAgentConfig{
-		Path:    r.providerManager.StaticPodManifestPath(cluster.Spec.ControlPlaneRef.Kind),
+		Path:    r.StaticPodManifestPath,
 		Owner:   "root:root",
 		Content: cc.Status.AgentManifest,
 	}

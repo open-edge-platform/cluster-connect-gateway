@@ -27,6 +27,7 @@ type ConnectAgent struct {
 	TunnelId           string
 	TokenPath          string
 	TunnelAuthMode     string
+	StaticPodPath      string
 }
 
 const (
