@@ -4,6 +4,7 @@
 package controller
 
 import (
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -69,6 +70,14 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 				return err == nil && cc.Status.AgentManifest != ""
 			}, timeout, interval).Should(BeTrue())
 
+			// Ensure status.connectionProbe is set.
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, testClusterConnect, cc)
+				return err == nil &&
+					cc.Status.ConnectionProbe.LastProbeTimestamp == metav1.Time{} &&
+					cc.Status.ConnectionProbe.LastProbeSuccessTimestamp == metav1.Time{}
+			}, timeout, interval).Should(BeTrue())
+
 			// Ensure ControlPlaneEndpoint is set.
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, testClusterConnect, cc)
@@ -77,8 +86,8 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 					cc.Status.ControlPlaneEndpoint.Port == 8080
 			}, timeout, interval).Should(BeTrue())
 
-			// Ensure there are three conditions and status.ready is true.
-			Expect(cc.Status.Conditions).To(HaveLen(3))
+			// Ensure there are four conditions and status.ready is true.
+			Expect(cc.Status.Conditions).To(HaveLen(4))
 			Expect(cc.Status.Ready).To(BeTrue())
 		})
 	})
@@ -111,6 +120,14 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 					Topology: &clusterv1.Topology{
 						Class:   "baseline-v0.0.1",
 						Version: "v1.30.6+rke2r1",
+						Variables: []clusterv1.ClusterVariable{
+							{
+								Name: "airGapped",
+								Value: v1.JSON{
+									Raw: []byte("true"),
+								},
+							},
+						},
 					},
 				},
 			}
@@ -308,8 +325,9 @@ alqk7z9FdSWcdNlg08Oo/j8W/yQrvpsipgAwcxA3XnVSC6CKtysc
 			// TODO: improve the validation here
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, testCluster, cl)
-				return err == nil && len(cl.Spec.Topology.Variables) == 1 &&
-					cl.Spec.Topology.Variables[0].Name == "connectAgentManifest"
+				return err == nil && len(cl.Spec.Topology.Variables) == 2 &&
+					cl.Spec.Topology.Variables[0].Name == "airGapped" &&
+					cl.Spec.Topology.Variables[1].Name == "connectAgentManifest"
 			}, timeout, interval).Should(BeTrue())
 
 			// Now set ObservedGeneration to Generation.

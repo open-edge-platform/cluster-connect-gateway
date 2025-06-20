@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	cutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -81,6 +83,10 @@ var (
 	}
 )
 
+var (
+	clusterConnectConnectionProbeTimeout = 5 * time.Minute
+)
+
 type ConnectAgentConfig struct {
 	Path    string `json:"path"`
 	Owner   string `json:"owner"`
@@ -121,14 +127,17 @@ func clusterRefIdxFunc(o client.Object) []string {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, connectionTimeout time.Duration, concurrency int) error {
 	if r.Client == nil {
 		return errors.New("Client must not be nil")
 	}
 
+	clusterConnectConnectionProbeTimeout = connectionTimeout
+
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ClusterConnect{}).
 		Named("cluster/clusterconnect").
+		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Build(r)
 
 	if err != nil {
@@ -241,13 +250,26 @@ func (r *ClusterConnectReconciler) updateStatus(ctx context.Context, cc *v1alpha
 	_ = log.FromContext(ctx)
 
 	// Check if conditions are initialized, if not, initialize them with Unknown.
-	if len(cc.Status.Conditions) == 0 {
-		initConditions(cc)
+	initConditions(cc)
+
+	// if ConnectionProbeState is not set, initialize it.
+	if cc.Status.ConnectionProbe == (v1alpha1.ConnectionProbeState{}) {
+		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
+			LastProbeTimestamp:        metav1.Time{},
+			LastProbeSuccessTimestamp: metav1.Time{},
+		}
 	}
 
 	// Set status.ready to true if all the conditions are true.
 	status := true
 	for _, condition := range cc.Status.Conditions {
+		// skip the condition that is not a part of the provisioning.
+		// Status.Ready value should be based only on the conditions
+		// that are part of the provisioning.
+		if condition.Type == v1alpha1.ConnectionProbeCondition {
+			continue
+		}
+
 		if condition.Status != metav1.ConditionTrue {
 			status = false
 			break
@@ -281,13 +303,15 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	// Setp 4 to 6 is valid only when ClusterRef is set in the ClusterConnect object.
 	// 1) Ensure the auth token
 	// 2) Generate the connect-agent pod manifest
-	// 3) Set control plane endpoint
-	// 4) Set the connect-agent config to Cluster object
-	// 5) Wait until the Cluster object update is reconciled by Topology controller
-	// 6) Update kubeconfig secret
+	// 3) Initialize the connection probe state
+	// 4) Set control plane endpoint
+	// 5) Set the connect-agent config to Cluster object
+	// 6) Wait until the Cluster object update is reconciled by Topology controller
+	// 7) Update kubeconfig secret
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
+		r.reconcileConnectionProbe,
 		r.reconcileControlPlaneEndpoint,
 		r.reconcileClusterSpec,
 		r.reconcileTopology,
@@ -372,23 +396,32 @@ func (r *ClusterConnectReconciler) reconcileControlPlaneEndpoint(ctx context.Con
 }
 
 func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
-	// Return early, if the ClusterConnect doesn't have associated Cluster-API resources.
+	_ = log.FromContext(ctx)
+
+	// Return early if ClusterRef is not set in the ClusterConnect object.
 	if cc.Spec.ClusterRef == nil {
 		return nil
 	}
 
 	cluster := &clusterv1.Cluster{}
-	err := r.Client.Get(ctx, client.ObjectKey{
+	clusterKey := client.ObjectKey{
 		Namespace: cc.Spec.ClusterRef.Namespace,
 		Name:      cc.Spec.ClusterRef.Name,
-	}, cluster)
-
-	if err != nil {
-		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to get Cluster object: %v", err)
 	}
 
-	// Now update the Cluster object with the agent config.
+	// Fetch the Cluster object.
+	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to get Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
+	}
+
+	// Validate Cluster topology.
+	if cluster.Spec.Topology == nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
+	}
+
+	// Prepare the agent configuration.
 	agentConfig := &ConnectAgentConfig{
 		Path:    r.providerManager.StaticPodManifestPath(cluster.Spec.ControlPlaneRef.Kind),
 		Owner:   "root:root",
@@ -398,33 +431,52 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	agentConfigJson, err := json.Marshal(agentConfig)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to marshal agent config: %v", err)
+		return fmt.Errorf("failed to marshal agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	// Inject the pod manifest.
+	// Patch the Cluster object.
 	patchHelper, err := patch.NewHelper(cluster, r.Client)
 	if err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("failed to create patch helper for Cluster: %v", err)
+		return fmt.Errorf("failed to create patch helper for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	cluster.Spec.Topology.Variables = []clusterv1.ClusterVariable{
-		{
-			Name: "connectAgentManifest",
-			Value: v1.JSON{
-				Raw: agentConfigJson,
-			},
-		},
+	// Check and update the `connectAgentManifest` variable.
+	variableUpdated := false
+	for i, variable := range cluster.Spec.Topology.Variables {
+		if variable.Name == "connectAgentManifest" {
+			var existingConfig ConnectAgentConfig
+			if err := json.Unmarshal(variable.Value.Raw, &existingConfig); err != nil {
+				setClusterSpecUpdatedConditionFalse(cc)
+				return fmt.Errorf("failed to unmarshal existing agent config for Cluster %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
+			}
+
+			// Update the variable if it doesn't match the desired configuration.
+			if existingConfig.Path != agentConfig.Path || existingConfig.Content != agentConfig.Content || existingConfig.Owner != agentConfig.Owner {
+				cluster.Spec.Topology.Variables[i].Value = v1.JSON{Raw: agentConfigJson}
+				variableUpdated = true
+			} else {
+				setClusterSpecReadyConditionTrue(cc)
+				return nil
+			}
+		}
 	}
 
-	// Patch the updates after each reconciliation.
+	// Add the variable if it doesn't exist.
+	if !variableUpdated {
+		cluster.Spec.Topology.Variables = append(cluster.Spec.Topology.Variables, clusterv1.ClusterVariable{
+			Name:  "connectAgentManifest",
+			Value: v1.JSON{Raw: agentConfigJson},
+		})
+	}
+
 	patchOpts := []patch.Option{patch.WithStatusObservedGeneration{}}
 	if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
-		setClusterSpecUpdatedConditionFalse(cc, "failed to patch Cluster")
-		return fmt.Errorf("failed to patch Cluster object: %v", err)
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to patch Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	setClusterSpecReayConditionTrue(cc)
+	setClusterSpecReadyConditionTrue(cc)
 	return nil
 }
 
@@ -555,6 +607,34 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 	}
 
 	setKubeconfigReadyConditionTrue(cc)
+	return nil
+}
+
+func (r *ClusterConnectReconciler) reconcileConnectionProbe(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
+	log.FromContext(ctx)
+	// Initialize ConnectionProbe if not already set.
+	if cc.Status.ConnectionProbe == (v1alpha1.ConnectionProbeState{}) {
+		cc.Status.ConnectionProbe = v1alpha1.ConnectionProbeState{
+			LastProbeTimestamp:        metav1.Time{},
+			LastProbeSuccessTimestamp: metav1.Time{},
+		}
+	}
+
+	if cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.IsZero() {
+		// initConditions will keep ConnectionProbeCondition Unknown
+		return nil
+	}
+
+	timeDiff := cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Sub(cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time)
+	if timeDiff > clusterConnectConnectionProbeTimeout {
+		msg := fmt.Sprintf("Remote connection probe failed. Time since last successful probe: %s. Last probe: %s, Last successful probe: %s",
+			timeDiff.String(),
+			cc.Status.ConnectionProbe.LastProbeTimestamp.Time.Format(time.RFC3339),
+			cc.Status.ConnectionProbe.LastProbeSuccessTimestamp.Time.Format(time.RFC3339))
+		setConnectionProbeConditionFalse(cc, msg)
+	} else {
+		setConnectionProbeConditionTrue(cc)
+	}
 	return nil
 }
 

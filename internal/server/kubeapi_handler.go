@@ -277,3 +277,20 @@ func (s *Server) cleanupUnusedHttpClients() {
 		return true
 	})
 }
+
+func (s *Server) checkHttpClientsConnection() {
+	log.Debug("checking health of http clients")
+	clients.Range(func(key, value any) bool {
+		clientName := key.(string)
+		tunnelId := strings.Split(clientName, "/")[0]
+
+		log.Debugf("checking health of client %s for tunnel %s", clientName, tunnelId)
+		err := s.kubeclient.UpdateConnectionProbe(tunnelId, s.remotedialer.HasSession(tunnelId))
+		if err != nil {
+			log.Errorf("failed to update connection probe for tunnel %s: %v", tunnelId, err)
+		}
+
+		return true
+	})
+	log.Debug("finished checking health of http clients")
+}
