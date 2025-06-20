@@ -203,3 +203,6 @@ controller:
   
   # Timeout for connection probe to downstream clusters
   connectionProbeTimeout: "5m"
+
+agent:
+  staticPodPath: "/var/lib/kubelet/static-pods/connect-agent.yaml"
