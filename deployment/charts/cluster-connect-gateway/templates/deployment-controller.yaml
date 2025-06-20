@@ -45,6 +45,7 @@ spec:
         args:
           - --leader-elect
           - --health-probe-bind-address=:8081
+          - --connection-probe-timeout={{ .Values.controller.connectionProbeTimeout }}
         {{- if .Values.controller.metrics.enabled }}
           - --metrics-bind-address=:{{ .Values.controller.metrics.port }}
           - --metrics-secure=false

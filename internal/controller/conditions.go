@@ -17,11 +17,12 @@ var requiredConditionTypes = []string{
 	v1alpha1.ControlPlaneEndpointSetCondition,
 	v1alpha1.ClusterSpecUpdatedCondition,
 	v1alpha1.TopologyReconciledCondition,
+	v1alpha1.ConnectionProbeCondition,
 }
 
 // initConditions initializes conditions with Unknown if conditions are not set.
 func initConditions(cc *v1alpha1.ClusterConnect) {
-	if len(cc.GetConditions()) == 0 {
+	if len(cc.GetConditions()) < len(requiredConditionTypes) {
 		for _, condition := range requiredConditionTypes {
 			// Skip ClusterSpecUpdatedCondition and TopologyReconciledCondition if ClusterRef is not set.
 			if cc.Spec.ClusterRef == nil {
@@ -29,6 +30,11 @@ func initConditions(cc *v1alpha1.ClusterConnect) {
 					condition == v1alpha1.TopologyReconciledCondition {
 					continue
 				}
+			}
+
+			if v1beta2conditions.Has(cc, condition) {
+				// If the condition is already set, skip it.
+				continue
 			}
 
 			// Set condition to Unknown otherwise.
@@ -106,7 +112,7 @@ func setControlPlaneEndpointSetConditionTrue(cc *v1alpha1.ClusterConnect, messag
 	})
 }
 
-func setClusterSpecReayConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
+func setClusterSpecReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
 	conditionMessage := ""
 	if len(message) > 0 {
 		conditionMessage = message[0]
@@ -119,7 +125,7 @@ func setClusterSpecReayConditionTrue(cc *v1alpha1.ClusterConnect, message ...str
 	})
 }
 
-func setClusterSpecUpdatedConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) {
+func setClusterSpecUpdatedConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) { //nolint:unparam
 	conditionMessage := ""
 	if len(message) > 0 {
 		conditionMessage = message[0]
@@ -167,6 +173,31 @@ func setKubeconfigReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...str
 		Type:    v1alpha1.KubeconfigReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  v1alpha1.ReadyReason,
+		Message: conditionMessage,
+	})
+}
+
+func setConnectionProbeConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
+	conditionMessage := ""
+	if len(message) > 0 {
+		conditionMessage = message[0]
+	}
+	v1beta2conditions.Set(cc, metav1.Condition{
+		Type:    v1alpha1.ConnectionProbeCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  v1alpha1.ConnectionProbeSucceededReason,
+		Message: conditionMessage,
+	})
+}
+func setConnectionProbeConditionFalse(cc *v1alpha1.ClusterConnect, message ...string) {
+	conditionMessage := ""
+	if len(message) > 0 {
+		conditionMessage = message[0]
+	}
+	v1beta2conditions.Set(cc, metav1.Condition{
+		Type:    v1alpha1.ConnectionProbeCondition,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ConnectionProbeFailedReason,
 		Message: conditionMessage,
 	})
 }
