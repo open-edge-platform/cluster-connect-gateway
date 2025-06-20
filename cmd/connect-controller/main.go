@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: (C) 2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package main // nolint:cyclop
 
 import (
 	"crypto/tls"
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	goruntime "runtime"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -55,6 +58,12 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var connectionProbeTimeout time.Duration
+	var profilerAddress string
+	var enableContentionProfiling bool
+	var concurrency int
+	var kubeApiQPS float64
+	var kubeApiBurst int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -72,6 +81,13 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.DurationVar(&connectionProbeTimeout, "connection-probe-timeout", 5*time.Minute, "The timeout duration for connection probes.")
+	flag.StringVar(&profilerAddress, "profiler-address", "", "Bind address to expose the pprof profiler (e.g. localhost:6060)")
+	flag.BoolVar(&enableContentionProfiling, "contention-profiling", false, "Enable block profiling")
+	flag.IntVar(&concurrency, "concurrency", 1, "Maximum number of concurrent workers processing ClusterConnect resources")
+	flag.Float64Var(&kubeApiQPS, "kube-api-qps", 20, "Maximum queries per second from the controller client to the Kubernetes API server.")
+	flag.IntVar(&kubeApiBurst, "kube-api-burst", 30, "Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server.")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -79,6 +95,30 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Log configuration
+	setupLog.Info("starting connect-controller",
+		"metricsAddr", metricsAddr,
+		"probeAddr", probeAddr,
+		"enableLeaderElection", enableLeaderElection,
+		"secureMetrics", secureMetrics,
+		"webhookCertPath", webhookCertPath,
+		"webhookCertName", webhookCertName,
+		"webhookCertKey", webhookCertKey,
+		"metricsCertPath", metricsCertPath,
+		"metricsCertName", metricsCertName,
+		"metricsCertKey", metricsCertKey,
+		"enableHTTP2", enableHTTP2,
+		"connectionProbeTimeout", connectionProbeTimeout,
+		"profilerAddress", profilerAddress,
+		"enableContentionProfiling", enableContentionProfiling,
+		"concurrency", concurrency,
+		"kubeApiQPS", kubeApiQPS,
+		"kubeApiBurst", kubeApiBurst)
+
+	if enableContentionProfiling {
+		goruntime.SetBlockProfileRate(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -168,8 +208,11 @@ func main() {
 			config.GetCertificate = metricsCertWatcher.GetCertificate
 		})
 	}
+	restConfig := ctrl.GetConfigOrDie()
+	restConfig.QPS = float32(kubeApiQPS)
+	restConfig.Burst = kubeApiBurst
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
@@ -187,6 +230,7 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		PprofBindAddress: profilerAddress,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -206,7 +250,7 @@ func main() {
 	if err = (&controller.ClusterConnectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(ctx, mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, connectionProbeTimeout, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterConnect")
 		os.Exit(1)
 	}
@@ -237,7 +281,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting manager", "connectionProbeTimeout", connectionProbeTimeout)
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
