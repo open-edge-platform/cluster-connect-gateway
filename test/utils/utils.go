@@ -188,6 +188,12 @@ func InstallClusterAPIOperator() error {
 	)
 
 	_, err = Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the webhook service to be ready
+	err = WaitForWebhookService("capi-operator-webhook-service", "capi-operator-system")
 	return err
 
 }
@@ -248,7 +254,7 @@ func InstallClusterAPIProvider() error {
 	}
 
 	// Wait for RKE2 control plane provider
-	err = WaitForDeployment("rke2-bootstrap-controller-manager", "capr-system")
+	err = WaitForDeployment("rke2-control-plane-controller-manager", "capr-system")
 	if err != nil {
 		return err
 	}
@@ -412,6 +418,31 @@ func WaitForDeployment(deployment, namespace string) error {
 			output, err := Run(cmd)
 			if err == nil && strings.Contains(output, "1/1") {
 				return nil
+			}
+		}
+	}
+}
+
+// WaitForWebhookService waits for a webhook service to be ready by checking if the service has endpoints
+func WaitForWebhookService(serviceName, namespace string) error {
+	timeout := time.After(3 * time.Minute)
+	tick := time.Tick(5 * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("webhook service %s/%s is not ready after 3 minutes", namespace, serviceName)
+		case <-tick:
+			// Check if the service has endpoints (meaning the pods are ready)
+			cmd := exec.Command("kubectl", "get", "endpoints", serviceName, "--namespace", namespace, "-o", "jsonpath={.subsets[*].addresses[*].ip}")
+			output, err := Run(cmd)
+			if err == nil && strings.TrimSpace(output) != "" {
+				// Additional check: try to reach the webhook service
+				cmd = exec.Command("kubectl", "get", "validatingwebhookconfigurations")
+				_, err = Run(cmd)
+				if err == nil {
+					return nil
+				}
 			}
 		}
 	}

@@ -17,6 +17,7 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -306,17 +307,36 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 	// 3) Initialize the connection probe state
 	// 4) Set control plane endpoint
 	// 5) Set the connect-agent config to Cluster object
-	// 6) Wait until the Cluster object update is reconciled by Topology controller
+	// 6) Wait until the Cluster object update is reconciled by Topology controller (skip for legacy mode)
 	// 7) Update kubeconfig secret
+
+	// Check if we're in legacy mode to determine which phases to run
+	isLegacyMode := false
+	if cc.Spec.ClusterRef != nil {
+		cluster := &clusterv1.Cluster{}
+		clusterKey := client.ObjectKey{
+			Namespace: cc.Spec.ClusterRef.Namespace,
+			Name:      cc.Spec.ClusterRef.Name,
+		}
+		if err := r.Client.Get(ctx, clusterKey, cluster); err == nil {
+			isLegacyMode = cluster.Spec.Topology == nil
+		}
+	}
+
 	phases := []func(context.Context, *v1alpha1.ClusterConnect) error{
 		r.reconcileAuthToken,
 		r.reconcileConnectAgentManifest,
 		r.reconcileConnectionProbe,
 		r.reconcileControlPlaneEndpoint,
 		r.reconcileClusterSpec,
-		r.reconcileTopology,
-		r.reconcileKubeconfig,
 	}
+
+	// Only add reconcileTopology for topology mode clusters
+	if !isLegacyMode {
+		phases = append(phases, r.reconcileTopology)
+	}
+
+	phases = append(phases, r.reconcileKubeconfig)
 
 	errs := []error{}
 	for _, phase := range phases {
@@ -396,7 +416,7 @@ func (r *ClusterConnectReconciler) reconcileControlPlaneEndpoint(ctx context.Con
 }
 
 func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc *v1alpha1.ClusterConnect) error {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
 	// Return early if ClusterRef is not set in the ClusterConnect object.
 	if cc.Spec.ClusterRef == nil {
@@ -415,10 +435,10 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 		return fmt.Errorf("failed to get Cluster object %s/%s: %v", clusterKey.Namespace, clusterKey.Name, err)
 	}
 
-	// Validate Cluster topology.
+	// Handle legacy mode by patching ControlPlane directly
 	if cluster.Spec.Topology == nil {
-		setClusterSpecUpdatedConditionFalse(cc)
-		return fmt.Errorf("cluster %s/%s has no topology defined", clusterKey.Namespace, clusterKey.Name)
+		log.Info("Cluster is using legacy mode without topology. Will inject directly into ControlPlane object.", "cluster", clusterKey)
+		return r.reconcileLegacyMode(ctx, cc, cluster)
 	}
 
 	// Prepare the agent configuration.
@@ -607,6 +627,92 @@ func (r *ClusterConnectReconciler) reconcileKubeconfig(ctx context.Context, cc *
 	}
 
 	setKubeconfigReadyConditionTrue(cc)
+	return nil
+}
+
+func (r *ClusterConnectReconciler) reconcileLegacyMode(ctx context.Context, cc *v1alpha1.ClusterConnect, cluster *clusterv1.Cluster) error {
+	log := log.FromContext(ctx)
+
+	// For legacy mode, we need to directly patch the ControlPlane object
+	if cluster.Spec.ControlPlaneRef == nil {
+		return fmt.Errorf("cluster has no ControlPlaneRef")
+	}
+
+	// Get the ControlPlane object
+	controlPlaneRef := cluster.Spec.ControlPlaneRef
+	controlPlaneKey := client.ObjectKey{
+		Namespace: controlPlaneRef.Namespace,
+		Name:      controlPlaneRef.Name,
+	}
+
+	// Use unstructured object to handle any ControlPlane type
+	controlPlane := &unstructured.Unstructured{}
+	controlPlane.SetAPIVersion(controlPlaneRef.APIVersion)
+	controlPlane.SetKind(controlPlaneRef.Kind)
+
+	if err := r.Client.Get(ctx, controlPlaneKey, controlPlane); err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to get ControlPlane object %s/%s: %v", controlPlaneKey.Namespace, controlPlaneKey.Name, err)
+	}
+
+	// Prepare the agent configuration file
+	agentFile := map[string]interface{}{
+		"path":    agentManifestPath,
+		"owner":   "root:root",
+		"content": cc.Status.AgentManifest,
+	}
+
+	// Get existing files from spec.files
+	spec, exists := controlPlane.Object["spec"].(map[string]interface{})
+	if !exists {
+		spec = make(map[string]interface{})
+		controlPlane.Object["spec"] = spec
+	}
+
+	files, exists := spec["files"].([]interface{})
+	if !exists {
+		files = []interface{}{}
+	}
+
+	// Check if connect-agent.yaml already exists
+	agentFileExists := false
+	for i, file := range files {
+		if fileMap, ok := file.(map[string]interface{}); ok {
+			if path, ok := fileMap["path"].(string); ok && path == agentManifestPath {
+				// Update existing file if content differs
+				if content, ok := fileMap["content"].(string); !ok || content != cc.Status.AgentManifest {
+					files[i] = agentFile
+					log.Info("Updated connect-agent.yaml file in ControlPlane", "controlPlane", controlPlaneKey)
+				} else {
+					log.Info("connect-agent.yaml file already up to date in ControlPlane", "controlPlane", controlPlaneKey)
+					setClusterSpecReadyConditionTrue(cc)
+					setTopologyReconciledConditionTrue(cc)
+					return nil
+				}
+				agentFileExists = true
+				break
+			}
+		}
+	}
+
+	// Add the file if it doesn't exist
+	if !agentFileExists {
+		files = append(files, agentFile)
+		log.Info("Added connect-agent.yaml file to ControlPlane", "controlPlane", controlPlaneKey)
+	}
+
+	// Update the spec.files in the ControlPlane object
+	spec["files"] = files
+
+	// Update the ControlPlane object directly
+	if err := r.Client.Update(ctx, controlPlane); err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to update ControlPlane object %s/%s: %v", controlPlaneKey.Namespace, controlPlaneKey.Name, err)
+	}
+
+	log.Info("Successfully injected connect-agent configuration into ControlPlane", "controlPlane", controlPlaneKey)
+	setClusterSpecReadyConditionTrue(cc)
+	setTopologyReconciledConditionTrue(cc)
 	return nil
 }
 

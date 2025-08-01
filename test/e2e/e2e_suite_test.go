@@ -21,6 +21,7 @@ var (
 	skipKindCleanup        = os.Getenv("SKIP_KIND_CLEANUP") == "true"
 	skipCertManagerInstall = os.Getenv("CERT_MANAGER_INSTALL_SKIP") == "true"
 	skipClusterAPIInstall  = os.Getenv("CLUSTER_API_INSTALL_SKIP") == "true"
+	skipDockerBuild        = os.Getenv("SKIP_DOCKER_BUILD") == "true"
 
 	isCertManagerAlreadyInstalled        = false
 	isClusterAPIOperatorAlreadyInstalled = false
@@ -50,14 +51,18 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	By("building the manager image")
-	cmd := exec.Command("make", "docker-build")
-	_, err := utils.Run(cmd)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the images")
+	if !skipDockerBuild {
+		By("building the manager image")
+		cmd := exec.Command("make", "docker-build")
+		_, err := utils.Run(cmd)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the images")
+	} else {
+		_, _ = fmt.Fprintf(GinkgoWriter, "Skipping Docker build step...\n")
+	}
 
 	By("loading the manager image on Kind")
-	cmd = exec.Command("make", "docker-load")
-	_, err = utils.Run(cmd)
+	cmd := exec.Command("make", "docker-load")
+	_, err := utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to load the images into Kind")
 
 	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.

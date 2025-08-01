@@ -7,6 +7,9 @@ kind: ClusterConnect
 metadata:
   name: capd-rke2-test
 spec:
+  clusterRef:
+    name: capd-rke2-test
+    namespace: e2e-test
   serverCertRef:
     name: rke2-controlplane-webhook-service-cert
     namespace: capr-system
