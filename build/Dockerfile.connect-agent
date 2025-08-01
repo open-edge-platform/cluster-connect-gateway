@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Build the connect-agent
-FROM golang:1.23.6 AS builder
+FROM golang:1.24 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0

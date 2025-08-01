@@ -36,7 +36,7 @@ DOCKER_IMAGE_AGENT      ?= ${REGISTRY}/${REGISTRY_NO_AUTH}/${REPOSITORY}/connect
 DOCKER_IMAGE_AGENT_LATEST ?= ${REGISTRY}/${REGISTRY_NO_AUTH}/${REPOSITORY}/connect-agent:latest
 
 ## Labels to add Docker/Helm/Service CI meta-data.
-LABEL_SOURCE       ?= $(shell git remote get-url $(shell git remote))
+LABEL_SOURCE       ?= $(shell git remote get-url $(shell git remote) | sed 's|://[^@/]*@|://|g') # Strip credentials from git URLs
 LABEL_REVISION     = $(shell git rev-parse HEAD)
 LABEL_CREATED      ?= $(shell date -u "+%Y-%m-%dT%H:%M:%SZ")
 
