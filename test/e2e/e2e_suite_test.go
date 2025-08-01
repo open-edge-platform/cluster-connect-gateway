@@ -51,6 +51,13 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	// BeforeSuite sets up the complete test environment for cluster-connect-gateway e2e tests.
+	// This includes:
+	// 1. Building and loading Docker images for the controller and gateway
+	// 2. Installing prerequisite components (CertManager, Cluster API)
+	// 3. Installing the cluster-connect-gateway Helm chart
+	// 4. Creating test namespaces and resources
+
 	if !skipDockerBuild {
 		By("building the manager image")
 		cmd := exec.Command("make", "docker-build")
@@ -81,6 +88,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	// Setup Cluster API before the suite if not skipped and if not already installed
+	// Cluster API is required for managing K3s control plane and bootstrap configurations
 	if !skipClusterAPIInstall {
 		By("checking if cluster api operator is installed already")
 		isClusterAPIOperatorAlreadyInstalled = utils.IsClusterAPIOperatorCRDsInstalled()
@@ -95,6 +103,7 @@ var _ = BeforeSuite(func() {
 		isClusterAPIProviderAlreadyInstalled = utils.IsClusterAPIProviderCRDsInstalled()
 		if !isClusterAPIProviderAlreadyInstalled {
 			_, _ = fmt.Fprintf(GinkgoWriter, "Installing Cluster API Provider...\n")
+			// This installs K3s (KThrees) providers for control plane and bootstrap configuration
 			Eventually(utils.InstallClusterAPIProvider(), timeout, interval).Should(Succeed(), "Failed to install Cluster API provider")
 		} else {
 			_, _ = fmt.Fprintf(GinkgoWriter, "WARNING: Cluster API Provider is already installed. Skipping installation...\n")
@@ -102,15 +111,21 @@ var _ = BeforeSuite(func() {
 	}
 
 	By("installing cluster-connect-gateway helm charts")
+	// Install the main cluster-connect-gateway application that manages ClusterConnect resources
+	// and injects connect-agent configurations into K3s control plane manifests
 	Expect(utils.InstallEdgeConnectGateway(namespace)).To(Succeed(), "Failed to install Edge Connect Gateway")
 
 	By("creating namespace for test resources")
+	// Create the e2e-test namespace where test Cluster, ControlPlane, and ClusterConnect resources will be deployed
 	cmd = exec.Command("kubectl", "apply", "-f", testDataPath+"namespace.yaml")
 	_, err = utils.Run(cmd)
 	Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
 })
 
 var _ = AfterSuite(func() {
+	// AfterSuite performs cleanup of all components installed during BeforeSuite
+	// This ensures the test environment is properly torn down after e2e tests complete
+
 	// Teardown CertManager after the suite if not skipped and if they were not already installed
 	if !skipKindCleanup && !skipCertManagerInstall && !isCertManagerAlreadyInstalled {
 		_, _ = fmt.Fprintf(GinkgoWriter, "Uninstalling CertManager...\n")
@@ -130,6 +145,7 @@ var _ = AfterSuite(func() {
 	// Teardown the helm chart.
 	if !skipKindCleanup {
 		By("uninstalling cluster-connect-gateway helm charts")
+		// Remove the cluster-connect-gateway controller and gateway deployments
 		cmd := exec.Command("make", "helm-uninstall")
 		_, _ = utils.Run(cmd)
 	}

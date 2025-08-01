@@ -69,7 +69,7 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
-  - rke2controlplanes
+  - kthreescontrolplanes
   verbs:
   - get
   - list

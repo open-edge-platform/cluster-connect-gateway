@@ -151,7 +151,7 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		return errors.Wrap(err, "failed to initialize token manager")
 	}
 
-	// Initialize provider manager with RKE2ControlPlane provider.
+	// Initialize provider manager with KThreesControlPlane provider.
 	// Add KubeadmControlPlane when implemented.
 	r.providerManager = provider.NewProviderManager().
 		WithProvider("RKE2ControlPlane", "/var/lib/rancher/rke2/agent/pod-manifests/connect-agent.yaml").
@@ -662,15 +662,46 @@ func (r *ClusterConnectReconciler) reconcileLegacyMode(ctx context.Context, cc *
 		"content": cc.Status.AgentManifest,
 	}
 
-	// Get existing files from spec.files
+	// Get existing files from the correct path based on control plane kind
 	spec, exists := controlPlane.Object["spec"].(map[string]interface{})
 	if !exists {
 		spec = make(map[string]interface{})
 		controlPlane.Object["spec"] = spec
 	}
 
-	files, exists := spec["files"].([]interface{})
-	if !exists {
+	var files []interface{}
+	var filesPath []string
+
+	// Determine the correct path for files based on the control plane kind
+	switch controlPlane.GetKind() {
+	case "KThreesControlPlane":
+		// For KThreesControlPlane, files are at spec.kthreesConfigSpec.files
+		filesPath = []string{"kthreesConfigSpec", "files"}
+	case "RKE2ControlPlane":
+		// For RKE2ControlPlane, files are at spec.files
+		filesPath = []string{"files"}
+	default:
+		// Default to spec.files for other providers
+		filesPath = []string{"files"}
+	}
+
+	// Navigate to the correct nested path
+	current := spec
+	for _, pathSegment := range filesPath[:len(filesPath)-1] {
+		if next, exists := current[pathSegment].(map[string]interface{}); exists {
+			current = next
+		} else {
+			// Create missing intermediate objects
+			current[pathSegment] = make(map[string]interface{})
+			current = current[pathSegment].(map[string]interface{})
+		}
+	}
+
+	// Get the files array from the final path segment
+	finalKey := filesPath[len(filesPath)-1]
+	if existingFiles, exists := current[finalKey].([]interface{}); exists {
+		files = existingFiles
+	} else {
 		files = []interface{}{}
 	}
 
@@ -701,8 +732,8 @@ func (r *ClusterConnectReconciler) reconcileLegacyMode(ctx context.Context, cc *
 		log.Info("Added connect-agent.yaml file to ControlPlane", "controlPlane", controlPlaneKey)
 	}
 
-	// Update the spec.files in the ControlPlane object
-	spec["files"] = files
+	// Update the files in the ControlPlane object at the correct path
+	current[finalKey] = files
 
 	// Update the ControlPlane object directly
 	if err := r.Client.Update(ctx, controlPlane); err != nil {

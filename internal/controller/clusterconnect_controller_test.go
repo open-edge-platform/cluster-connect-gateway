@@ -4,8 +4,9 @@
 package controller
 
 import (
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"time"
+
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -113,7 +114,7 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 				Spec: clusterv1.ClusterSpec{
 					ControlPlaneRef: &corev1.ObjectReference{
 						APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
-						Kind:       "RKE2ControlPlane",
+						Kind:       "KThreesControlPlane",
 						Name:       testName,
 						Namespace:  "default",
 					},

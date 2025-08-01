@@ -247,14 +247,14 @@ func InstallClusterAPIProvider() error {
 		return err
 	}
 
-	// Wait for RKE2 bootstrap provider
-	err = WaitForDeployment("rke2-bootstrap-controller-manager", "capr-system")
+	// Wait for K3s bootstrap provider
+	err = WaitForDeployment("capi-k3s-bootstrap-controller-manager", "capk-system")
 	if err != nil {
 		return err
 	}
 
-	// Wait for RKE2 control plane provider
-	err = WaitForDeployment("rke2-control-plane-controller-manager", "capr-system")
+	// Wait for K3s control plane provider
+	err = WaitForDeployment("capi-k3s-control-plane-controller-manager", "capk-system")
 	if err != nil {
 		return err
 	}
@@ -276,8 +276,8 @@ func IsClusterAPIProviderCRDsInstalled() bool {
 		"clusters.cluster.x-k8s.io",
 		"machines.cluster.x-k8s.io",
 		"clusterclasses.cluster.x-k8s.io",
-		"rke2configs.bootstrap.cluster.x-k8s.io",
-		"rke2clusters.controlplane.cluster.x-k8s.io",
+		"kthreesconfigs.bootstrap.cluster.x-k8s.io",
+		"kthreescontrolplanes.controlplane.cluster.x-k8s.io",
 		"dockerclusters.infrastructure.cluster.x-k8s.io",
 		"dockermachines.infrastructure.cluster.x-k8s.io",
 	}
