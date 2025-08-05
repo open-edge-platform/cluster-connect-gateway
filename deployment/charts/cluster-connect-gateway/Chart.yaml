@@ -6,11 +6,11 @@ apiVersion: v2
 name: cluster-connect-gateway
 description: A Helm chart for Cluster Connect Gateway
 type: application
-version: 1.2.1
+version: 1.2.3-dev-9614e209
 annotations:
-  revision: dffd378fd9489c404db0496747ccf47bcaf58c33
-  created: "2025-06-10T15:27:56Z"
-appVersion: 1.2.1
+  revision: 9614e209d182f7c09173afc360b1aca1745425a4
+  created: "2025-06-20T13:43:07Z"
+appVersion: 1.2.3-dev-9614e209
 dependencies:
   - name: "connect-agent"
     repository: "file://./charts/connect-agent"
