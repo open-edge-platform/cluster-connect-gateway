@@ -78,7 +78,6 @@ spec:
             - "--external-host={{ .Values.gateway.ingress.hostname }}"
             - "--tunnel-auth-mode={{ .Values.security.agent.authMode }}"
             - "--connection-probe-interval={{ .Values.gateway.connectionProbeInterval }}"
-            - "--static-pod-path={{ .Values.agent.staticPodPath }}"
             {{- with .Values.gateway.extraArgs }}
             {{- range . }}
             - {{ . | quote }}
