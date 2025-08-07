@@ -112,7 +112,7 @@ func setControlPlaneEndpointSetConditionTrue(cc *v1alpha1.ClusterConnect, messag
 	})
 }
 
-func setClusterSpecReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) {
+func setClusterSpecReadyConditionTrue(cc *v1alpha1.ClusterConnect, message ...string) { //nolint:unparam
 	conditionMessage := ""
 	if len(message) > 0 {
 		conditionMessage = message[0]

@@ -113,7 +113,7 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 				Spec: clusterv1.ClusterSpec{
 					ControlPlaneRef: &corev1.ObjectReference{
 						APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
-						Kind:       "RKE2ControlPlane",
+						Kind:       "KThreesControlPlane",
 						Name:       testName,
 						Namespace:  "default",
 					},
