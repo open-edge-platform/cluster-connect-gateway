@@ -27,7 +27,7 @@ func main() {
 	flag.StringVar(&authToken, "auth-token", "", "The authentication token")
 	flag.StringVar(&logLevel, "log-level", "info", "Log levels: info, debug, trace")
 	flag.StringVar(&tokenPath, "token-path", "./access_token", "path to jwt token")
-	flag.StringVar(&staticPodPath, "static-pod-path", "/var/lib/kubelet/static-pods/connect-agent.yaml", "path to static pod manifests")
+	flag.StringVar(&staticPodPath, "static-pod-path", "/var/lib/rancher/k3s/agent/pod-manifests/connect-agent.yaml", "path to static pod manifests")
 	flag.Parse()
 
 	// Set log level for the tunnel data
