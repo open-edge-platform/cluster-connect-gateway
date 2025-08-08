@@ -203,3 +203,8 @@ controller:
   
   # Timeout for connection probe to downstream clusters
   connectionProbeTimeout: "5m"
+
+agent:
+  # Static pod path aligned with the cluster template
+  # K3s uses /var/lib/rancher/k3s/agent/pod-manifests as configured in kubelet --pod-manifest-path
+  staticPodPath: "/var/lib/rancher/k3s/agent/pod-manifests/connect-agent.yaml"
