@@ -64,6 +64,7 @@ func main() {
 	var concurrency int
 	var kubeApiQPS float64
 	var kubeApiBurst int
+	var staticPodPath string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -87,6 +88,7 @@ func main() {
 	flag.IntVar(&concurrency, "concurrency", 1, "Maximum number of concurrent workers processing ClusterConnect resources")
 	flag.Float64Var(&kubeApiQPS, "kube-api-qps", 20, "Maximum queries per second from the controller client to the Kubernetes API server.")
 	flag.IntVar(&kubeApiBurst, "kube-api-burst", 30, "Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server.")
+	flag.StringVar(&staticPodPath, "static-pod-path", "/var/lib/kubelet/static-pods/connect-agent.yaml", "The path where the connect-agent static pod manifest should be deployed.")
 
 	opts := zap.Options{
 		Development: true,
@@ -250,6 +252,7 @@ func main() {
 	if err = (&controller.ClusterConnectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		StaticPodManifestPath: staticPodPath,
 	}).SetupWithManager(ctx, mgr, connectionProbeTimeout, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterConnect")
 		os.Exit(1)
