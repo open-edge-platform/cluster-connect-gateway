@@ -28,7 +28,7 @@ var (
 func main() {
 	var gatewayAddress, logLevel, opaAddress, oidcIssuerURL, externalHost, tunnelAuthMode string
 	var gatewayPort, opaPort int
-	var enableAuth, enableMetrics, oidcInsecureSkipVerify bool
+	var enableAuth, enableMetrics, oidcInsecureSkipVerify, tlsInsecureSkipVerify bool
 	var connectionProbeInterval time.Duration
 	flag.StringVar(&gatewayAddress, "address", "0.0.0.0", "Address to listen on for edge connection gateway")
 	flag.IntVar(&gatewayPort, "port", 8080, "Port to listen on for edge connection gateway")
@@ -37,6 +37,7 @@ func main() {
 	flag.StringVar(&logLevel, "log-level", "info", "Log levels: info, debug, trace, warn")
 	flag.StringVar(&oidcIssuerURL, "oidc-issuer-url", "", "OIDC Issuer URL")
 	flag.BoolVar(&oidcInsecureSkipVerify, "oidc-insecure-skip-verify", false, "OIDC Insecure Skip Verify")
+	flag.BoolVar(&tlsInsecureSkipVerify, "tls-insecure-skip-verify", false, "Skip TLS certificate verification for client connections")
 	flag.StringVar(&externalHost, "external-host", "", "External host for the gateway")
 
 	flag.StringVar(&opaAddress, "opa-address", "http://localhost", "Address to opa")
@@ -77,6 +78,7 @@ func main() {
 		server.WithExternalHost(externalHost),
 		server.WithOIDCIssuerURL(oidcIssuerURL),
 		server.WithOIDCInsecureSkipVerify(oidcInsecureSkipVerify),
+		server.WithTLSInsecureSkipVerify(tlsInsecureSkipVerify),
 		server.WithCleanupTicker(clientCleanupTicker),
 		server.WithConnectionProbeTicker(connectionProbeTicker),
 	)
