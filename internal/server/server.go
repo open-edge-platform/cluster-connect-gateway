@@ -39,6 +39,7 @@ type Server struct {
 	externalHost           string
 	oidcIssuerURL          string
 	oidcInsecureSkipVerify bool
+	tlsInsecureSkipVerify  bool
 	opaAddress             string
 	opaPort                int
 	cleanupTicker          *time.Ticker
@@ -124,6 +125,12 @@ func WithOIDCInsecureSkipVerify(insecureSkipVerify bool) ServerOptions {
 	}
 }
 
+func WithTLSInsecureSkipVerify(insecureSkipVerify bool) ServerOptions {
+	return func(s *Server) {
+		s.tlsInsecureSkipVerify = insecureSkipVerify
+	}
+}
+
 // Build creates a new Server with the configured options
 func NewServer(options ...ServerOptions) (s *Server, err error) {
 	server := &Server{
@@ -203,18 +210,21 @@ func (s *Server) GetClient(tunnelID string, timeout string) (*http.Client, error
 		return nil, err
 	}
 
-	// If the CA pool is not nil or the client cert is not empty, set the TLS config
+	// Set up TLS configuration based on available certs and security settings
 	if caPool != nil || len(cca.Certificate) != 0 {
 		tlsConfig := &tls.Config{
 			RootCAs:            caPool,
 			Certificates:       []tls.Certificate{cca},
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: s.tlsInsecureSkipVerify,
+		}
+		transport.TLSClientConfig = tlsConfig
+	} else {
+		// set up basic TLS config
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: s.tlsInsecureSkipVerify,
 		}
 		transport.TLSClientConfig = tlsConfig
 	}
-
-	// TODO: Read insecure skip verify from the config
-	// And add it to the TLS config regardless of the existence of the CA pool
 
 	client := &http.Client{
 		Transport: transport,
