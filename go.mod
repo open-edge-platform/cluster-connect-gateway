@@ -1,6 +1,6 @@
 module github.com/open-edge-platform/cluster-connect-gateway
 
-go 1.25.2
+go 1.24.8
 
 require (
 	github.com/atomix/dazl v1.1.4
