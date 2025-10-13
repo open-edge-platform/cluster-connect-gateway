@@ -12,3 +12,11 @@ allow if {
 role := sprintf("%s_cl-rw", [input.project_id])
 
 have_role if role == input.realm_access.roles[_]
+
+allow if service_group_access
+
+service_group_access if {
+	"apps-m2m-service-account" in input.groups
+	"clusters-read-role" in input.realm_access.roles
+	input.preferred_username == "service-account-co-manager-m2m-client"
+}
