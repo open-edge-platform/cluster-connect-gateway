@@ -4,13 +4,13 @@
 ---
 
 name: Pre-Merge CI Pipeline
-  
+
 on:
   pull_request:
     branches:
       - main
       - release-*
-  workflow_dispatch: 
+  workflow_dispatch:
 
 permissions: {}
 
