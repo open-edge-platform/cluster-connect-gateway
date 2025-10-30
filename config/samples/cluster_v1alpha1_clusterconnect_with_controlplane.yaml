@@ -5,7 +5,7 @@ metadata:
 spec:
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: RKE2ControlPlane
+    kind: KThreesControlPlane
     name: sample-control-plane
     namespace: default
 
