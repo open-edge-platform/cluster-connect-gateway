@@ -203,3 +203,5 @@ controller:
   
   # Timeout for connection probe to downstream clusters
   connectionProbeTimeout: "5m"
+
+traefikApiGroup: "traefik.containo.us/v1alpha1"

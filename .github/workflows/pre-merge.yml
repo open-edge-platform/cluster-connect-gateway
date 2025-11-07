@@ -4,13 +4,13 @@
 ---
 
 name: Pre-Merge CI Pipeline
-  
+
 on:
   pull_request:
     branches:
       - main
       - release-*
-  workflow_dispatch: 
+  workflow_dispatch:
 
 permissions: {}
 
@@ -18,7 +18,7 @@ jobs:
   pre-merge:
     permissions:
       contents: read
-    uses: open-edge-platform/orch-ci/.github/workflows/pre-merge.yml@0.1.52
+    uses: open-edge-platform/orch-ci/.github/workflows/pre-merge.yml@0.1.58
     with:
       bootstrap_tools: "base,go"
       cache_go: true

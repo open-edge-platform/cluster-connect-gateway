@@ -5,7 +5,7 @@
 
 {{- if .Values.gateway.ingress.enabled }}
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: {{ .Values.traefikApiGroup }}
 kind: IngressRoute
 metadata:
   name: cluster-connect-gateway-kubeapi
@@ -25,7 +25,7 @@ spec:
           scheme: http
 ---
 # ingress for edge-connect-agent websocket connection
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: {{ .Values.traefikApiGroup }}
 kind: IngressRoute
 metadata:
   name: cluster-connect-gateway-ws
