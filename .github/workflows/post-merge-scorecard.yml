@@ -25,4 +25,3 @@ jobs:
       project_folder: "."
     secrets:
       SYS_ORCH_GITHUB: ${{ secrets.SYS_ORCH_GITHUB }}
-  
