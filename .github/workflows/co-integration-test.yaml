@@ -26,25 +26,25 @@ jobs:
       - name: Checkout orch ci
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
+          token: ${{ secrets.SYS_EMF_GH_TOKEN }}
           repository: open-edge-platform/orch-ci
           path: ci
           ref: "main"
-          token: ${{ secrets.SYS_ORCH_GITHUB }}
           persist-credentials: false
 
       - name: Checkout cluster-tests for integration tests
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
+          token: ${{ secrets.SYS_EMF_GH_TOKEN }}
           repository: open-edge-platform/cluster-tests
           path: cluster-tests
           ref: "main"
-          token: ${{ secrets.SYS_ORCH_GITHUB }}
           persist-credentials: false
 
       - name: Bootstrap CI environment
         uses: ./ci/.github/actions/bootstrap
         with:
-          gh_token: ${{ secrets.SYS_ORCH_GITHUB }}
+          gh_token: ${{ secrets.SYS_EMF_GH_TOKEN }}
 
       - name: Run make test with additional config
         env:
