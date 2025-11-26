@@ -5,7 +5,8 @@
 
 name: Post-Merge CI Pipeline
 
-permissions: {}
+permissions:
+  contents: read
 
 on:
   push:
