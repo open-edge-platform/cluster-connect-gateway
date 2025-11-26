@@ -27,7 +27,7 @@ jobs:
       - name: Checkout orch ci
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3  # v6.0.0
         with:
-          token: ${{ secrets.SYS_EMF_GH_TOKEN }}
+          token: ${{ secrets.SYS_EMF_GH_TOKEN || github.token }}
           repository: open-edge-platform/orch-ci
           path: ci
           ref: "main"
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout cluster-tests for integration tests
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3  # v6.0.0
         with:
-          token: ${{ secrets.SYS_EMF_GH_TOKEN }}
+          token: ${{ secrets.SYS_EMF_GH_TOKEN || github.token }}
           repository: open-edge-platform/cluster-tests
           path: cluster-tests
           ref: "main"
