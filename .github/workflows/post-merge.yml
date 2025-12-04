@@ -5,14 +5,15 @@
 
 name: Post-Merge CI Pipeline
 
-permissions: {}
-
 on:
   push:
     branches:
       - main
       - release-*
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   post-merge:
@@ -34,8 +35,6 @@ jobs:
       run_helm_push: true
     secrets:
       SYS_ORCH_GITHUB: ${{ secrets.SYS_ORCH_GITHUB }}
-      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
       NO_AUTH_ECR_PUSH_USERNAME: ${{ secrets.NO_AUTH_ECR_PUSH_USERNAME }}
       NO_AUTH_ECR_PUSH_PASSWD: ${{ secrets.NO_AUTH_ECR_PUSH_PASSWD }}
       MSTEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}

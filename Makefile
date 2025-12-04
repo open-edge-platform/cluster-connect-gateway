@@ -12,6 +12,8 @@ VERSION            ?= $(shell cat VERSION)
 GIT_HASH_SHORT     := $(shell git rev-parse --short=8 HEAD)
 VERSION_DEV_SUFFIX := ${GIT_HASH_SHORT}
 
+FUZZTIME ?= 60s
+
 # Add an identifying suffix for `-dev` builds only.
 # Release build versions are verified as unique by the CI build process.
 ifeq ($(findstring -dev,$(VERSION)), -dev)
@@ -120,6 +122,10 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: fuzz
+fuzz: vendor ## Run Fuzz tests against REST API handlers
+	hack/fuzz_all.sh ${FUZZTIME}
 
 .PHONY: test
 test: manifests generate fmt vet envtest gocov helm-test go-test ## Run tests.
