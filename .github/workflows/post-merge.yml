@@ -5,15 +5,15 @@
 
 name: Post-Merge CI Pipeline
 
-permissions:
-  contents: read
-
 on:
   push:
     branches:
       - main
       - release-*
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   post-merge:
