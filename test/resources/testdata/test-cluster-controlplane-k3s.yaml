@@ -5,38 +5,35 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-  name: capd-rke2-test
+  name: capd-k3s-test
   namespace: e2e-test
 spec:
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: RKE2ControlPlane
-    name: capd-rke2-test
+    kind: KThreesControlPlane
+    name: capd-k3s-test
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: DockerCluster
-    name: capd-rke2-test
+    name: capd-k3s-test
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-kind: RKE2ControlPlane
+kind: KThreesControlPlane
 metadata:
-  name: capd-rke2-test
+  name: capd-k3s-test
   namespace: e2e-test
 spec:
-  files:
-    - content: |
-        #!/bin/bash
-        set -e
-        echo "Hello, World!"
-      path: /etc/hello-world.sh
-      owner: root:root
-  infrastructureRef:
+  version: v1.32.4+k3s1
+  replicas: 1
+  infrastructureTemplate:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: DockerMachineTemplate
-    name: capd-rke2-test
-  replicas: 1
-  rolloutStrategy:
-    rollingUpdate:
-      maxSurge: 1
-    type: RollingUpdate
-  version: v1.31.3+rke2r1
+    name: capd-k3s-test
+  kthreesConfigSpec:
+    files:
+      - content: |
+          #!/bin/bash
+          set -e
+          echo "Hello, World!"
+        path: /etc/hello-world.sh
+        owner: root:root

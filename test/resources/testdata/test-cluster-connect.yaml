@@ -5,11 +5,14 @@
 apiVersion: cluster.edge-orchestrator.intel.com/v1alpha1
 kind: ClusterConnect
 metadata:
-  name: capd-rke2-test
+  name: capd-k3s-test
 spec:
+  clusterRef:
+    name: capd-k3s-test
+    namespace: e2e-test
   serverCertRef:
-    name: rke2-controlplane-webhook-service-cert
+    name: k3s-controlplane-webhook-service-cert
     namespace: capr-system
   clientCertRef:
-    name: rke2-controlplane-webhook-service-cert
+    name: k3s-controlplane-webhook-service-cert
     namespace: capr-system
