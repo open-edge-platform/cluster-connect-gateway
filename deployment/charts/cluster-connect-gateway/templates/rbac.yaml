@@ -67,16 +67,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - controlplane.cluster.x-k8s.io
-  resources:
-  - kthreescontrolplanes
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - ""
   resources:
   - configmaps
