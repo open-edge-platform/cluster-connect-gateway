@@ -115,6 +115,20 @@ var _ = BeforeSuite(func() {
 	// and injects connect-agent configurations into K3s control plane manifests
 	Expect(utils.InstallEdgeConnectGateway(namespace)).To(Succeed(), "Failed to install Edge Connect Gateway")
 
+	By("granting permissions to access kthreescontrolplanes")
+	cmd = exec.Command("kubectl", "create", "clusterrole", "e2e-k3s-reader",
+		"--verb=get,list,patch,update,watch",
+		"--resource=kthreescontrolplanes.controlplane.cluster.x-k8s.io")
+	_, err = utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred(), "Failed to create e2e-k3s-reader clusterrole")
+
+	sa := fmt.Sprintf("%s:cluster-connect-gateway", namespace)
+	cmd = exec.Command("kubectl", "create", "clusterrolebinding", "e2e-k3s-reader-binding",
+		"--clusterrole=e2e-k3s-reader",
+		"--serviceaccount="+sa)
+	_, err = utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred(), "Failed to create e2e-k3s-reader-binding clusterrolebinding")
+
 	By("creating namespace for test resources")
 	// Create the e2e-test namespace where test Cluster, ControlPlane, and ClusterConnect resources will be deployed
 	cmd = exec.Command("kubectl", "apply", "-f", testDataPath+"namespace.yaml")
@@ -147,6 +161,12 @@ var _ = AfterSuite(func() {
 		By("uninstalling cluster-connect-gateway helm charts")
 		// Remove the cluster-connect-gateway controller and gateway deployments
 		cmd := exec.Command("make", "helm-uninstall")
+		_, _ = utils.Run(cmd)
+
+		By("cleaning up permissions to access kthreescontrolplanes")
+		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", "e2e-k3s-reader-binding", "--ignore-not-found")
+		_, _ = utils.Run(cmd)
+		cmd = exec.Command("kubectl", "delete", "clusterrole", "e2e-k3s-reader", "--ignore-not-found")
 		_, _ = utils.Run(cmd)
 	}
 })
