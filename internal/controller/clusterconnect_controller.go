@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -116,7 +116,7 @@ type ClusterConnectReconciler struct {
 	controlPlaneEndpointPort int32
 
 	externalTracker external.ObjectTracker
-	recorder        record.EventRecorder
+	recorder        events.EventRecorder
 }
 
 func clusterRefIdxFunc(o client.Object) []string {
@@ -184,7 +184,7 @@ func (r *ClusterConnectReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		Scheme:          mgr.GetScheme(),
 		PredicateLogger: &predicateLog,
 	}
-	r.recorder = mgr.GetEventRecorderFor("cluster/clusterconnect")
+	r.recorder = mgr.GetEventRecorder("cluster/clusterconnect")
 	return nil
 }
 
@@ -241,7 +241,7 @@ func (r *ClusterConnectReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Handle normal reconciliation loop.
 	result, err := r.reconcile(ctx, cc)
 	if err != nil {
-		r.recorder.Eventf(cc, corev1.EventTypeWarning, "ReconcileError", "%v", err)
+		r.recorder.Eventf(cc, nil, corev1.EventTypeWarning, "ReconcileError", "Reconcile", "Reconciliation failed: %v", err)
 	}
 
 	return result, err
