@@ -67,8 +67,8 @@ ENVTEST_K8S_VERSION = 1.31.0
 VENV_NAME = venv-env
 
 # GoCov versions
-GOLANG_GOCOV_VERSION := latest
-GOLANG_GOCOV_XML_VERSION := latest
+GOLANG_GOCOV_VERSION := v1.2.1
+GOLANG_GOCOV_XML_VERSION := v1.1.0
 PKG := github.com/open-edge-platform/cluster-connect-gateway
 TEST_PATHS := ./internal/...
 
@@ -420,8 +420,20 @@ cobertura:
 
 .PHONY: gocov
 gocov:
-	go install github.com/axw/gocov/gocov@${GOLANG_GOCOV_VERSION}
-	go install github.com/AlekSi/gocov-xml@${GOLANG_GOCOV_XML_VERSION}
+	@if ! which gocov > /dev/null 2>&1; then \
+		echo "Building gocov from source..."; \
+		tmpdir=$$(mktemp -d); \
+		cd $$tmpdir && git clone --depth 1 --branch ${GOLANG_GOCOV_VERSION} https://github.com/axw/gocov.git && \
+		cd gocov && go mod edit -replace golang.org/x/tools=golang.org/x/tools@v0.41.0 && \
+		go mod tidy && go install ./gocov && cd / && rm -rf $$tmpdir; \
+	fi
+	@if ! which gocov-xml > /dev/null 2>&1; then \
+		echo "Building gocov-xml from source..."; \
+		tmpdir=$$(mktemp -d); \
+		cd $$tmpdir && git clone --depth 1 --branch ${GOLANG_GOCOV_XML_VERSION} https://github.com/AlekSi/gocov-xml.git && \
+		cd gocov-xml && go mod edit -replace golang.org/x/tools=golang.org/x/tools@v0.41.0 && \
+		go mod tidy && go install && cd / && rm -rf $$tmpdir; \
+	fi
 
 $(VENV_NAME): requirements.txt
 	echo "Creating virtualenv $@"
