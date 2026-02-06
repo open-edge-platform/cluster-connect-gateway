@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/onsi/ginkgo/v2 v2.28.1
-	github.com/onsi/gomega v1.39.0
+	github.com/onsi/gomega v1.39.1
 	github.com/open-edge-platform/orch-library/go v0.6.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
