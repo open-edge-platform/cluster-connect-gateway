@@ -21,7 +21,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.35.1
 	k8s.io/apimachinery v0.35.1
 	k8s.io/client-go v0.35.1
-	sigs.k8s.io/cluster-api v1.10.4
+	sigs.k8s.io/cluster-api v1.10.10
 	sigs.k8s.io/controller-runtime v0.23.1
 )
 
@@ -133,5 +133,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace golang.org/x/tools => golang.org/x/tools v0.41.0
