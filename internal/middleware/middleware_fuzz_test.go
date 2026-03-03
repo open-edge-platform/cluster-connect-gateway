@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -182,7 +183,10 @@ func FuzzHTTPRequestMethods(f *testing.F) {
 			return
 		}
 
-		req := httptest.NewRequest(method, path, nil)
+		req, err := http.NewRequest(method, path, nil)
+		if err != nil {
+			return
+		}
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}
