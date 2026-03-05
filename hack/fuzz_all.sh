@@ -60,6 +60,15 @@ do
             exit 1
         } &
         pids+=("$!")
+        # Throttle: keep at most 14 fuzz jobs running concurrently to avoid OOM
+        while [ "${#pids[@]}" -ge 14 ]; do
+            running=()
+            for pid in "${pids[@]}"; do
+                kill -0 "$pid" 2>/dev/null && running+=("$pid")
+            done
+            pids=("${running[@]+${running[@]}}")
+            [ "${#pids[@]}" -ge 14 ] && sleep 1
+        done
     done
 done
 
