@@ -12,9 +12,14 @@ trap "trap - SIGTERM && kill -- -$$ || true" SIGINT SIGTERM
 
 set -e
 
-fuzzTime="${1:-1}"  # read from argument list or fallback to default - 1 minute
+fuzzTime="${1:-1m}"  # read from argument list or fallback to default - 1 minute
+reevalRetries="${REEVAL_RETRIES:-2}"  # retry count when a crashing corpus input is reported
 
-files=$(grep -r --include='**_test.go' --files-with-matches 'func Fuzz' internal cmd)
+if ! [[ "$reevalRetries" =~ ^[1-9][0-9]*$ ]]; then
+    exit 2
+fi
+
+files=$(grep -r --include='*_test.go' --files-with-matches 'func Fuzz' internal cmd)
 
 cat <<EOF
 Starting fuzzing tests.
