@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -134,7 +135,10 @@ func FuzzHTTPMethods(f *testing.F) {
 		}
 
 		// Create request with fuzzy method and path
-		req := httptest.NewRequest(method, path, nil)
+		req, err := http.NewRequest(method, path, nil)
+		if err != nil {
+			return
+		}
 		req.Header.Set(agent.TunnelIdHeader, "test-tunnel")
 
 		// Test that request handling doesn't panic
