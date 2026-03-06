@@ -20,6 +20,7 @@ func FuzzExtractTunnelIdFromPath(f *testing.F) {
 	f.Add("/kubernetes")
 	f.Add("/api/v1/pods")
 	f.Add("")
+	f.Add("/%20%20")
 	f.Add("/kubernetes/tunnel-with-uuid-12345678-1234-1234-1234-123456789abc-cluster/resources")
 	f.Add("/kubernetes/tunnel!/path")
 
@@ -279,6 +280,7 @@ func FuzzUUIDFormats(f *testing.F) {
 	f.Add(byte(0x12), byte(0x34), byte(0x56), byte(0x78), byte(0x90), byte(0xab), byte(0xcd), byte(0xef))
 	f.Add(byte(0xff), byte(0xff), byte(0xff), byte(0xff), byte(0x00), byte(0x00), byte(0x00), byte(0x00))
 	f.Add(byte(0x00), byte(0x00), byte(0x00), byte(0x00), byte(0x00), byte(0x00), byte(0x00), byte(0x00))
+	f.Add(byte(0xa7), byte(0xff), byte(0xa8), byte(0xff), byte(0x00), byte(0x34), byte(0x00), byte(0x35))
 
 	f.Fuzz(func(t *testing.T, b0, b1, b2, b3, b4, b5, b6, b7 byte) {
 		// Create a UUID-like string from bytes
