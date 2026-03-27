@@ -16,9 +16,9 @@ metadata:
  name: k3s
  namespace: capk-system
 spec:
- version: v0.3.0
+ version: v0.3.1
  fetchConfig:
-   url: https://github.com/k3s-io/cluster-api-k3s/releases/download/v0.3.0/control-plane-components.yaml
+   url: https://github.com/k3s-io/cluster-api-k3s/releases/download/v0.3.1/control-plane-components.yaml
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
@@ -26,6 +26,6 @@ metadata:
  name: k3s
  namespace: capk-system
 spec:
- version: v0.3.0
+ version: v0.3.1
  fetchConfig:
-   url: https://github.com/k3s-io/cluster-api-k3s/releases/download/v0.3.0/bootstrap-components.yaml
+   url: https://github.com/k3s-io/cluster-api-k3s/releases/download/v0.3.1/bootstrap-components.yaml

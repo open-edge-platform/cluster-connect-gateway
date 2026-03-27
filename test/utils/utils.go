@@ -20,10 +20,10 @@ const (
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
-	certmanagerVersion = "v1.16.0"
+	certmanagerVersion = "v1.20.0"
 	certmanagerURL     = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
 
-	capiOperatorVersion = "v0.16.0"
+	capiOperatorVersion = "v0.26.0"
 	capiOperatorURL     = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/%s/operator-components.yaml"
 )
 
