@@ -16,4 +16,4 @@ metadata:
   name: cluster-api
   namespace: capi-system
 spec:
-  version: v1.9.4
+  version: v1.11.5

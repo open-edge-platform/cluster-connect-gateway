@@ -6,7 +6,7 @@ package controller
 import (
 	v1alpha1 "github.com/open-edge-platform/cluster-connect-gateway/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1beta2conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/conditions"
 )
 
 // requiredConditionTypes lists the conditions that must be met for the
