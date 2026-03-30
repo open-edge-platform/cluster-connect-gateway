@@ -4,8 +4,9 @@
 package controller
 
 import (
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"time"
+
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 
 	v1alpha1 "github.com/open-edge-platform/cluster-connect-gateway/api/v1alpha1"
 )
@@ -111,15 +112,14 @@ var _ = Describe("ClusterConnect Controller", Ordered, func() {
 					Namespace: "default",
 				},
 				Spec: clusterv1.ClusterSpec{
-					ControlPlaneRef: &corev1.ObjectReference{
-						APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
-						Kind:       "KThreesControlPlane",
-						Name:       testName,
-						Namespace:  "default",
+					ControlPlaneRef: clusterv1.ContractVersionedObjectReference{
+						APIGroup: "controlplane.cluster.x-k8s.io",
+						Kind:     "KThreesControlPlane",
+						Name:     testName,
 					},
-					Topology: &clusterv1.Topology{
-						Class:   "baseline-v0.0.1",
-						Version: "v1.30.6+rke2r1",
+					Topology: clusterv1.Topology{
+						ClassRef: clusterv1.ClusterClassRef{Name: "baseline-v0.0.1"},
+						Version:  "v1.30.6+rke2r1",
 						Variables: []clusterv1.ClusterVariable{
 							{
 								Name: "airGapped",

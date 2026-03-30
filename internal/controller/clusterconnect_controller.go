@@ -19,9 +19,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/events"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -319,7 +320,7 @@ func (r *ClusterConnectReconciler) reconcile(ctx context.Context, cc *v1alpha1.C
 			Name:      cc.Spec.ClusterRef.Name,
 		}
 		if err := r.Client.Get(ctx, clusterKey, cluster); err == nil {
-			isLegacyMode = cluster.Spec.Topology == nil
+			isLegacyMode = !cluster.Spec.Topology.IsDefined()
 		}
 	}
 
@@ -436,7 +437,7 @@ func (r *ClusterConnectReconciler) reconcileClusterSpec(ctx context.Context, cc 
 	}
 
 	// Handle legacy mode by patching ControlPlane directly
-	if cluster.Spec.Topology == nil {
+	if !cluster.Spec.Topology.IsDefined() {
 		log.Info("Cluster is using legacy mode without topology. Will inject directly into ControlPlane object.", "cluster", clusterKey)
 		return r.reconcileLegacyMode(ctx, cc, cluster)
 	}
@@ -634,21 +635,28 @@ func (r *ClusterConnectReconciler) reconcileLegacyMode(ctx context.Context, cc *
 	log := log.FromContext(ctx)
 
 	// For legacy mode, we need to directly patch the ControlPlane object
-	if cluster.Spec.ControlPlaneRef == nil {
+	if !cluster.Spec.ControlPlaneRef.IsDefined() {
 		return fmt.Errorf("cluster has no ControlPlaneRef")
 	}
 
 	// Get the ControlPlane object
 	controlPlaneRef := cluster.Spec.ControlPlaneRef
 	controlPlaneKey := client.ObjectKey{
-		Namespace: controlPlaneRef.Namespace,
+		Namespace: cluster.Namespace,
 		Name:      controlPlaneRef.Name,
+	}
+	controlPlaneMapping, err := r.Client.RESTMapper().RESTMapping(schema.GroupKind{
+		Group: controlPlaneRef.APIGroup,
+		Kind:  controlPlaneRef.Kind,
+	})
+	if err != nil {
+		setClusterSpecUpdatedConditionFalse(cc)
+		return fmt.Errorf("failed to resolve ControlPlane mapping for %s.%s: %v", controlPlaneRef.Kind, controlPlaneRef.APIGroup, err)
 	}
 
 	// Use unstructured object to handle any ControlPlane type
 	controlPlane := &unstructured.Unstructured{}
-	controlPlane.SetAPIVersion(controlPlaneRef.APIVersion)
-	controlPlane.SetKind(controlPlaneRef.Kind)
+	controlPlane.SetGroupVersionKind(controlPlaneMapping.GroupVersionKind)
 
 	if err := r.Client.Get(ctx, controlPlaneKey, controlPlane); err != nil {
 		setClusterSpecUpdatedConditionFalse(cc)
