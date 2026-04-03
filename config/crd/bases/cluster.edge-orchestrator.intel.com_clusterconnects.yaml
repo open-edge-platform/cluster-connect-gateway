@@ -269,18 +269,19 @@ spec:
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint provides the URL for accessing the
                   kubeapi-server through the connection gateway.
+                minProperties: 1
                 properties:
                   host:
                     description: host is the hostname on which the API server is serving.
                     maxLength: 512
+                    minLength: 1
                     type: string
                   port:
                     description: port is the port on which the API server is serving.
                     format: int32
+                    maximum: 65535
+                    minimum: 1
                     type: integer
-                required:
-                - host
-                - port
                 type: object
               ready:
                 description: Ready indicates connect-agent pod manifest is ready to
