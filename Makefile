@@ -57,7 +57,7 @@ DOCKER_BUILD_ARGS ?= \
 GOARCH       := $(shell go env GOARCH)
 GOEXTRAFLAGS := -trimpath -gcflags="all=-spectre=all -N -l" -asmflags="-spectre=all" -ldflags="all=-s -w"
 ifeq ($(GOARCH),arm64)
-  GOEXTRAFLAGS := -trimpath -gcflags="all=-spectre= -N -l" -asmflags="-spectre=all" -ldflags="all=-s -w"
+  GOEXTRAFLAGS := -trimpath -gcflags="all=-spectre= -N -l" -asmflags="-spectre=" -ldflags="all=-s -w"
 endif
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
