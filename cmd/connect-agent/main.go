@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	defaultAgentHealthListenAddr = "127.0.0.1:8082"
+	defaultAgentHealthListenAddr = "0.0.0.0:8082"
 	defaultAgentHealthCheckURL   = "http://127.0.0.1:8082/healthz"
 )
 
