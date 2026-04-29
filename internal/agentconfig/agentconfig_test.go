@@ -28,6 +28,22 @@ spec:
     - "--log-level=info"
     - "--token-path=/testpath"
     - "--tunnel-auth-mode=token"
+		ports:
+		- containerPort: 8082
+			name: health
+			protocol: TCP
+		livenessProbe:
+			httpGet:
+				path: /healthz
+				port: 8082
+			initialDelaySeconds: 10
+			periodSeconds: 10
+		readinessProbe:
+			httpGet:
+				path: /healthz
+				port: 8082
+			initialDelaySeconds: 5
+			periodSeconds: 10
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
