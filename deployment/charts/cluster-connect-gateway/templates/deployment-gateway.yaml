@@ -85,20 +85,6 @@ spec:
             {{- end }}
           ports:
             - containerPort: {{ .Values.gateway.listenPort }}
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              scheme: HTTP
-              port: {{ .Values.gateway.listenPort }}
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              scheme: HTTP
-              port: {{ .Values.gateway.listenPort }}
-            initialDelaySeconds: 10
-            periodSeconds: 10
           securityContext:
             {{- toYaml .Values.gateway.containerSecurityContext | nindent 12 }}
           {{- with .Values.controller.resources }}

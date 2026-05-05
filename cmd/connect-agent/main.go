@@ -7,10 +7,8 @@ import (
 	"context"
 	"flag"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -18,15 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	defaultAgentHealthListenAddr = "0.0.0.0:8082"
-	defaultAgentHealthCheckURL   = "http://127.0.0.1:8082/healthz"
-)
-
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(runHealthCheck())
-	}
 
 	var gatewayUrl, tunnelId, logLevel, tokenPath, authToken, tunnelAuthMode string
 	var insecureSkipVerify bool
@@ -68,8 +58,6 @@ func main() {
 		stop()
 	}()
 
-	startHealthServer(ctx, logger)
-
 	agent := &agent.ConnectAgent{
 		GatewayUrl:         gatewayUrl,
 		InsecureSkipVerify: insecureSkipVerify,
@@ -80,46 +68,4 @@ func main() {
 	}
 
 	agent.Run(ctx)
-}
-
-func runHealthCheck() int {
-	client := http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(defaultAgentHealthCheckURL)
-	if err != nil {
-		return 1
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode/100 != 2 {
-		return 1
-	}
-	return 0
-}
-
-func startHealthServer(ctx context.Context, logger *zap.Logger) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(rw http.ResponseWriter, _ *http.Request) {
-		_, _ = rw.Write([]byte("Ok\n"))
-	})
-
-	srv := &http.Server{
-		Addr:              defaultAgentHealthListenAddr,
-		Handler:           mux,
-		ReadHeaderTimeout: 3 * time.Second,
-	}
-
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			logger.Warn("Failed to shut down health server", zap.Error(err))
-		}
-	}()
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Health server failed", zap.Error(err))
-		}
-	}()
 }

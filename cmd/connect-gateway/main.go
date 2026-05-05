@@ -25,15 +25,7 @@ var (
 	log = dazl.GetPackageLogger()
 )
 
-const (
-	defaultHealthCheckURL = "http://127.0.0.1:8080/healthz"
-)
-
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(runHealthCheck())
-	}
-
 	var gatewayAddress, logLevel, opaAddress, oidcIssuerURL, externalHost, tunnelAuthMode string
 	var gatewayPort, opaPort int
 	var enableAuth, enableMetrics, oidcInsecureSkipVerify, tlsInsecureSkipVerify bool
@@ -116,20 +108,6 @@ func main() {
 		// Handle the signal
 		log.Infof("Got %s signal. Aborting...", sig)
 	}
-}
-
-func runHealthCheck() int {
-	client := http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(defaultHealthCheckURL)
-	if err != nil {
-		return 1
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode/100 != 2 {
-		return 1
-	}
-	return 0
 }
 
 func setLogLevel(logLevel string) {
