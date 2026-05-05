@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# DS026: Dockerfile does not have HEALTHCHECK defined
+# Trivy misconfig finding that recommends adding HEALTHCHECK instructions
+DS026

@@ -17,7 +17,6 @@ import (
 )
 
 func main() {
-
 	var gatewayUrl, tunnelId, logLevel, tokenPath, authToken, tunnelAuthMode string
 	var insecureSkipVerify bool
 	flag.StringVar(&gatewayUrl, "gateway-url", "", "The URL of the gateway")
