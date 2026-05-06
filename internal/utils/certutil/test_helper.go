@@ -11,6 +11,8 @@ import (
 	"encoding/pem"
 	"math/big"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // GenerateTestCertificate generates a self-signed certificate and private key for testing.
@@ -21,21 +23,13 @@ func GenerateTestCertificate() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	notBefore := time.Now()
-	notAfter := notBefore.Add(10 * 365 * 24 * time.Hour) // Valid for 10 years
-
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		return nil, nil, err
-	}
-
 	template := x509.Certificate{
-		SerialNumber: serialNumber,
+		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			CommonName: "kubernetes",
 		},
-		NotBefore: notBefore,
-		NotAfter:  notAfter,
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(24 * time.Hour),
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
@@ -54,4 +48,21 @@ func GenerateTestCertificate() ([]byte, []byte, error) {
 		Bytes: privKeyBytes,
 	})
 	return certPEM, keyPEM, nil
+}
+
+// GenerateTestJWT generates a valid JWT token for testing.
+// Returns a Bearer token with HS256 signature.
+func GenerateTestJWT() (string, error) {
+	claims := jwt.MapClaims{
+		"sub": "1234567890",
+		"iat": time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte("test-signing-key"))
+	if err != nil {
+		return "", err
+	}
+
+	return "Bearer " + signedToken, nil
 }
