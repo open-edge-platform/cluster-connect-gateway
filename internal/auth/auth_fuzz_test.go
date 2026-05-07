@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/open-edge-platform/cluster-connect-gateway/internal/agent"
+	"github.com/open-edge-platform/cluster-connect-gateway/internal/utils/certutil"
 )
 
 // FuzzExtractTunnelId tests tunnel ID extraction from HTTP headers
@@ -256,8 +257,12 @@ func FuzzMultipleHeaders(f *testing.F) {
 
 // FuzzTokenFormats tests various token format patterns
 func FuzzTokenFormats(f *testing.F) {
-	// Add various JWT-like and token formats
-	f.Add("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U")
+	jwtToken, err := certutil.GenerateTestJWT()
+	if err != nil {
+		f.Fatalf("Failed to generate test JWT: %v", err)
+	}
+
+	f.Add(jwtToken)
 	f.Add("simple-token-123")
 	f.Add("")
 	f.Add("token-with-special-!@#$%^&*()")
