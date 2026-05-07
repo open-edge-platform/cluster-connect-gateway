@@ -13,6 +13,17 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "[gomod] "
+    groups:
+      internal-dependencies:
+        patterns:
+          - "*open-edge-platform*"
+          - "github.com/open-edge-platform/*"
+      k8s-updates:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+        exclude-patterns:
+          - "*open-edge-platform*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
