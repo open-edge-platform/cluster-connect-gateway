@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Build the connect-controller
-FROM golang:1.26 AS builder
+FROM golang:1.26@sha256:efaccb5b497e90df3ebe5216cc25cd9f98e73874e2d638b56e38d4a3f098c41c AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
@@ -25,7 +25,7 @@ COPY VERSION VERSION
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} make build-controller
 
 # Use distroless as minimal base image to package the connect-controller binary
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
 USER nonroot
 
 ARG org_oci_version=unknown
