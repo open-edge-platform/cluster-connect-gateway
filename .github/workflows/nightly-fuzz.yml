@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      FUZZTIME: 1m
+      FUZZTIME: 2m
       REEVAL_RETRIES: 2
 
     steps:
