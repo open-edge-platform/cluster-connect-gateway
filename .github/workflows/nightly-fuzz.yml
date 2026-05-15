@@ -19,10 +19,10 @@ jobs:
   fuzz:
     name: Run Fuzz Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 400
     env:
-      FUZZTIME: 2m
-      REEVAL_RETRIES: 2
+      FUZZTIME: 360m
+      REEVAL_RETRIES: 1
 
     steps:
       - name: Checkout
