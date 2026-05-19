@@ -41,7 +41,7 @@ do
             parentDir="$(dirname "$file")"
             mkdir -p fuzz-logs
             fuzzLog="fuzz-logs/${func}.log"
-            if go test "./$parentDir" -fuzz="$func" -run="$func" -fuzztime="${fuzzTime}" -v -parallel 1 >"$fuzzLog" 2>&1; then
+            if go test "./$parentDir" -fuzz="$func" -run="$func" -fuzztime="${fuzzTime}" -v -parallel 4 >"$fuzzLog" 2>&1; then
                 cat "$fuzzLog"
                 exit 0
             fi
