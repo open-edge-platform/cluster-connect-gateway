@@ -18,7 +18,7 @@ permissions:
 jobs:
   fuzz:
     name: Run Fuzz Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-16core-64GB
     timeout-minutes: 400
     env:
       FUZZTIME: 2m
