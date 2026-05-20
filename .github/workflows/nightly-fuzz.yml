@@ -37,7 +37,7 @@ jobs:
       - name: Run fuzz suite
         shell: bash
         run: |
-          set -o pipefail
+          set -eo pipefail
           mkdir -p fuzz-logs
           make fuzz 2>&1 | tee fuzz-logs/nightly-fuzz-console.log
 
