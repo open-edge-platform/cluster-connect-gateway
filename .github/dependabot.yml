@@ -13,6 +13,8 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "[gomod] "
+    cooldown:
+      default-days: 7
     groups:
       internal-dependencies:
         patterns:
@@ -33,6 +35,8 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "[gha] "
+    cooldown:
+      default-days: 7
   - package-ecosystem: "docker"
     directory: "/"  # Changed from "directories" to "directory"
     schedule:
@@ -42,3 +46,5 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "[docker] "
+    cooldown:
+      default-days: 7
